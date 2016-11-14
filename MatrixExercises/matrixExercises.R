@@ -121,3 +121,20 @@ visitantes <- round(data/5)
 
 #Calcula la media de visitantes en USA y fuera
 meanVisits <- apply(visitantes,2,mean)
+
+#Crea un array i <- array(c(1:10),dim=c(5,2)). ¿Qué información dan los siguientes comandos?
+#dim(i) -> da los valores de filas y columnas (y daría la información del resto de dimensiones si las hubeira)
+#nrow(i) -> da el número de filas que hay
+#ncol(i) -> da el número de columnas
+
+#Crea un array i de dimensiones 5 filas y dos columnas y rellénalo con valores del 1-5 y del 5 al 1
+i <- array(c(1:5,5:1),dim = c(5,2))
+
+#¿Qué hace el comando x[i] comprobando que tienes en x antes?
+#en x existen los múltiplos de 10 desde 10 hasta 870
+#x[i] da los valores de x situados en los índices de i.
+
+#¿y el comando x[i] <- 0?
+#establece los valores en las posiciones indicadas en de i a 0
+
+
