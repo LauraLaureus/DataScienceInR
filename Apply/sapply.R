@@ -18,3 +18,5 @@ install.packages("lattice")
 library(lattice)
 str(barley)
  #Es un dataframe de 120 registros y 4 variables
+
+
