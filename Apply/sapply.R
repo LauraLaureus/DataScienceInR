@@ -19,4 +19,9 @@ library(lattice)
 str(barley)
  #Es un dataframe de 120 registros y 4 variables
 
+#Obtén con lapply la longitud de cada uno de los elementos de la lista
+list_length <- lapply(barley,FUN = unique)
+
+#Obtén el resultado anterior en un vector
+
 
