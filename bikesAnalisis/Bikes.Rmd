@@ -1,0 +1,82 @@
+---
+title: "Bikes"
+author: "Laura del Pino Díaz"
+date: "23/11/2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Bicicletas
+
+   Este análisis fue sacado de una competición de Kaggle en donde a los participantes se les pidió la demanda de las bicicletas en Washintong DC basándose en los patrones de uso en relación al clima,hora y fecha.
+   Usando el sistema Bike Sharing systems, las personas alquilan una bicicleta en un punto y la devuelven en el mismo punto o en otro distinto.
+   Este alquiler puede ser de por membresía, es decir que la persona realiza alquileres de bicicletas de forma regular o alquilarlo de manera casual.
+   Este proceso está controlado por una red de puntos automatizados a lo largo de la ciudad.
+##Generación de hipótesis sobre el problema
+  Antes de mirar los datos que tenemos, debemos realizar una serie de hipótesis. De esta forma nuestras hipótesis no se verán influenciadas por los datos.
+  Algunas hipótesis que podríamos plantear son:
+*La tendencia horaria: habrá más demanda a las horas de entrada y salida de la oficina.
+*La tendencia diaria: los usuarios registrados usarán más la bicicleta durante los días laborables y los usuarios casuales más durante el fin de semana.
+*El clima: los días de lluvia se cogerá menos la bicicleta que los días que no llevue.
+*La temperatura: si hace mucho frío o mucho calor la demanda de bicicletas se reduce.
+*El estado del tráfico: si hay mucho tráfico aumenta la demanda de las bicicletas
+
+##Entendiendo el DataSet
+   El dataset contiene información sobre los alquileres de bicicletas cada hora durante los años 2011 y 2012.
+Los datos de entrenamiento están compuestos por los primeros 19 días del mes
+Los datos de test están compuestos por el día 20 en adelante.
+Hay que predecir el número de bicicletas que se alquilarán durante cada hora entre el 20 y el final de mes.
+Los datos de entrenamiento tienen información sobre los alquileres esporádicos y los clientes habituales. 
+
+#Variables independientes
+
+Las variables independientes de nuestro problema son:
+
+* La hora y fecha (variable datetime)
+* La estación(season)
+* Si es día de vacaciones o no(holiday)
+* Si es día de trabajo(workingday)
+* El tiempo atmosférico(weather) Puede tomar los valores del 1 al 4 de la siguiente manera:
++ 1. Despejado
++ 2. Niebla y nublado
++ 3. Nieve y Lluvia
++ 4. Fuertes lluvias y/o tormentas.
+* La temperatura(temp)
+* La sensación térmica(atemp)
+* La velocidad del viento(windspeed)
+* El número de usuarios registrados.
+
+
+#La estructura de datos que tenemos
+
+```{r cars}
+bikes_train <-read.csv("~/DataScience/DataScienceInR/bikesAnalisis/train.csv")
+summary(bikes_train)
+```
+
+#Todas contra todas
+
+Miremos que relación tiene cada variable la el número alquileres de bicicleta:
+
+* Estación 
+```{r bikes_train, echo=FALSE}
+hist(bikes_train$season)
+```
+
+  No podemos determinar que la estación influya en el alquiler de bicicletas.
+  
+```{r bikes_train, echo=FALSE}
+hist(bikes_train$weather)
+```
+   Por lo contrario si podemos determinar que un cielo despejado si que favorece al alquiler de bicicletas
+   
+```{r bikes_train, echo=FALSE}
+hist(bikes_train$temp)
+hist(bikes_train$atemp)
+hist(bikes_train$humidity)
+hist(bikes_train$windspeed)
+```
+   Hay que recalcar que las variables de temperatura, sensación térmica, humedad y velocidad del tiempo tienen una distribución que nos recuerda a la distribución normal. Este hecho nos permitirá utilizar una serie de algoritmos que tienen como restricción que las variables de entrada sigan una distribución normal. 
