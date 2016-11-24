@@ -1,0 +1,101 @@
+---
+title: "Boston"
+author: "Laura del Pino Díaz"
+date: "24/11/2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+require(MASS)
+```
+
+## Boston
+
+Boston es un conjunto de datos en el que están almacenados los distintos parámetros de las casas de la ciudad de Boston. El objetivo es intentar predecir el valor de las casas sabiendo el valor de un conjunto de ellas. 
+
+#Los parámetros
+
+* crim - proporción de crimen per cápita en el barrio.
+* zn - proporción de zona residencial por cada 25 000 pies cuadrados
+* indus - proporción de acres de negocios industriales.
+* chas - indica si la casa da al río Charles o no.
+* nox - concentración de óxido de nitrógenso en partes por 10 millones.
+* rm - número de habitaciones
+* age - proporción de viviendas anteriores a 1940.
+* dis - media ponderada de distancias a los cinco centros de empleo de Boston.
+* rad - índice de accesibilidad a los pasos altos.
+* tax - impuestos
+* ptratio - proporción de profesores.
+* black - 100(Bk -0.63)^2 donde Bk es la proporción de black en el pueblo
+* lstat - porcentaje de la población de estatus bajo
+*  medv - valor de la casa en 1000 dólares 
+
+  Se aconseja ejecutar el comando attach para acceder directamente a los campos.
+
+```{r Boston}
+attach(Boston)
+head(lstat)
+
+```
+
+## Visualización de datos
+
+ Para comprobar que datos intervienen en el valor final es necesario visualizar los datos con respecto de la salida. 
+  Esto lo podemos conseguir mirando cada una de las variables con respecto de la salida
+
+```{r , echo=FALSE}
+plot(Boston$medv~age,Boston)
+```
+
+   O directamente mirando todas las variables entre sí o con respecto a la salida.
+
+```{r,echo=FALSE}
+temp <-Boston
+plotY<-function (x,y) {
+plot(temp[,y]~temp[,x], xlab=paste(names(temp)[x]," X",x,sep=""), ylab=names(temp)[y])
+}
+par(mfrow=c(3,4))
+x <-sapply(1:(dim(temp)[2]-1), plotY, dim(temp)[2])
+par(mfrow=c(1,1))
+```
+\newpage 
+
+  Y una vez las comparamos todas elegimos las que nos parecen más relevantes. 
+   
+   
+```{r,echo=FALSE}
+   par(mfrow=c(3,3))
+x <-sapply(c(1, 5, 6, 7, 8, 10, 11, 12, 13), plotY, dim(temp)[2])
+par(mfrow=c(1,1))
+```
+
+    En este caso nos parece que tienen un ajustes lineal las variables rm y lstat.
+    
+## Obtención de un modelo lineal
+
+    Para obtener el modelo lineal sobre una variable utilizamos la función lm, que tiene como parámetros la fórmula y el conjunto de datos. 
+
+```{r}
+fit1 = lm(medv ~lstat, data = Boston)
+fit2 = lm(medv~rm,data=Boston)
+```
+
+    Ahora que tenemos el modelo lineal, vamos a comprobar la bondad del mismo para ello ejecutamos un summary para que nos de los datos
+
+```{r}
+summary(fit1)
+summary(fit2)
+```
+
+    Para saber cuan bueno es el modelo lineal nos fijaremos en el parámetro de salida de la llamada al summary R-squared o R cuadrada. 
+    Este parámetro cuanto más cercano a 1 mejor, por lo tanto en estos modelos que hemos generado donde R-squared es de 0.54 y 0.48 podemos decir que no son muy buenos.
+    
+### Accediendo a la información del modelo
+    
+    Para saber que información tiene nuestro modelo podemos consultar los campor realizando una llamada a names que nos devolverá todos los nombres de las variables almacenadas en el modelo
+    
+```{r}
+names(fit1)
+```
