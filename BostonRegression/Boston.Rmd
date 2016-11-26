@@ -99,3 +99,110 @@ summary(fit2)
 ```{r}
 names(fit1)
 ```
+    
+    Para calcular la raíz del error cuadrático mínimo utilizamos el siguiente  comando
+    
+    ```{r}
+    sqrt(sum(fit1$residuals^2)/length(fit1$residuals))
+    ```
+    Este error cuadrático mínimo no coincide con el que nos devolvía y eso es porque se utiliza el n-p para calcularlo. 
+    ```{r}
+    sqrt(sum(fit1$residuals^2)/(length(fit1$residuals)-2))
+    ```
+    En este caso al ajustar el denominador con -2  si se obtiene el coeficiente que nos devolvió el summary. 
+    
+##Predicción sobre nuevos datos.
+
+  El fin último de la regresión es la estimación del valor del parámetro de salida a partir del modelo. Para predecir con el modelo que hemos creado anteriormente utilizaremos el siguiente comando:
+
+```{r} 
+  predict(fit1, data.frame(lstat=c(5,10,15)))
+```
+
+  El cálculo de la raíz del error cuadrático mínimo para el conjunto de test lo hacemos ejecutando la siguiente sentencia:
+  
+```{r}
+   yprime=predict(fit1,data.frame(lstat=Boston$lstat))
+   sqrt(sum(abs(Boston$medv-yprime)^2)/length(yprime))
+```
+  
+#Modelo de regresión lineal múltiple
+   
+    Dado que el modelo lineal con una sola variable no es lo suficientemente bueno podemos añadirles variables a nuestro modelo 
+    
+```{r}
+  fit3=lm(medv~lstat+age,data=Boston)
+  summary(fit3)
+```
+
+   En este primer modelo lineal compuesto vemos tres variables, la combinación de lstat y age, así como cada una de las variables por separado. 
+   Ante el test de hipótesis de vemos que la variable age está marcada por dos **, esto no es buena señal puesto que indica que aporta menos que las demás a la salida en el modelo. 
+   
+   Sabiendo esto cambiamos la variable age por rm y comprobamos que es lo que obtenemos
+
+```{r}
+fit4=lm(medv~lstat+rm,data=Boston)
+summary(fit4)
+```
+
+  Ahora la variable de nuestro modelo que no interviene es la combinación de ambas, por lo que seguiremos modificando el modelo pero esta vez no lo haremos al tuntún sino que probaremos con el conjunto de todas las variables.
+  
+```{r}
+fit5=lm(medv~.,data=Boston)
+summary(fit5)
+```
+ 
+  Todas aquellas variables con un alto Pr son candidatas a ser eliminadas. Por ello vamos a eliminar de nuestro modelo a las variables age e indus
+  
+```{r}
+fit6=lm(medv~.-age-indus,data=Boston)
+summary(fit6)
+```
+
+   Comparando las dos R cuadradas parece que hemos mejorado levemente el modelo.  Probemos a eliminar aquellas variables marcadas únuicamente con ** 
+   
+```{r}
+fit7=lm(medv~.-age-indus-chas-crim,data=Boston)
+summary(fit7)
+```
+  
+  En este caso vemos que empeora con respecto al caso anterior en casi un 1%
+  
+##Iteracciones y no linealidad
+
+#Interacción
+ 
+   Probemos esta vez con interrelaciones entre variables.
+   
+```{r}
+fit8=lm(medv~lstat*rm,Boston)
+summary(fit8)
+```
+
+  Esta combinación nos da el mejor modelo hasta la fecha. 
+  
+#No linealidad
+   
+  Si asumimos que el modelo no es lineal porque la intervención de alguna variable no lo sea, lo podemos probar haciendo uso de la función l
+
+```{r}
+fit9=lm(medv~I(lstat^2),Boston)
+summary(fit9)
+```
+  
+  Lo que hay que tener en cuenta que hay que poner un término por cada grado hasta llegar al grado que deseamos. 
+
+```{r}
+  fit9=lm(medv~lstat+I(lstat^2),Boston)
+summary(fit9)
+```
+
+  En el caso de que el grado sea muy grande podemos hacer uso de la función poly para que nos lo haga R.
+
+```{r}
+  fit10=lm(medv~poly(lstat,18))
+summary(fit10)
+```
+
+   En este resultado podemos ver como a partir del grado 5, las variables de grado superior dejan de ser importantes para el modelo. 
+   
