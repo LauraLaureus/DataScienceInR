@@ -1,0 +1,123 @@
+---
+title: "California"
+author: "Laura"
+date: "3 de diciembre de 2016"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(width=60)
+knitr::opts_chunk$set(comment = "", warning = FALSE, message = FALSE, echo = TRUE, tidy = TRUE, size="small")
+```
+
+## El conjunto de datos California
+El conjunto de datos *California* contiene datos sobre viviendas de California y pretende estimar el precio de una nueva vivienda. 
+
+Las variables con las que se pretende estimar el precio de la vivienda son las siguientes:
+
+* Longitud (_longitude_)
+* Latitud (_latitude_)
+* La edad media de las casas (_HousingMedianAge_)
+* El número de habitaciones (_TotalRooms_)
+* El número de dormitorios (_TotalBedrooms_)
+* El número de habitantes (_Population_)
+* El número de unidades familiares en el edificio (_Households_)
+* La media de ingresos (_MedianIncome_)
+* El valor medio de la casa (_MedianHouseValue_). El valor de esta variable es la que pretendendemos obtener. 
+
+##Hipótesis previas 
+   
+Sin mirar el contenido del conjunto de datos se plantean las siguientes hipótesis:
+
+1. El número de habitaciones incrementa el precio de forma lineal.
+2. A mayor edad meda más disminuye el precio.
+3. A mayor población más incrementa el precio de la vivienda.
+4. La distancia del centro disminuye el precio.
+5. La media de ingresos hace aumenta el precio.
+6. El número de unidades familiares en la vivienda hace disminuir el precio. 
+
+##El conjunto de datos
+
+La comprobación de las anteriores hipótesis la podemos realizar mirando como se comportan cada una de las variables con respecto a la salida. 
+
+Para ello primero cargamos la base de datos
+```{r}
+california_original <- read.csv("california.dat", header = FALSE, comment.char = "@")
+names(california_original) <- c("Longitude","Latitude","HousingMedianAge","TotalRooms","TotalBedrooms","Population","Households","MedianIncome","MedianHouseValue")
+
+```
+\newpage
+Y mostramos las comparaciones con la salida de las variables anteriores
+
+```{r}
+plot(california_original$TotalRooms, california_original$MedianHouseValue, main = "Influencia del número de habitaciones en el precio", xlab = "Número de habitaciones", ylab = "Precio final")
+```
+
+Aparentemente no existe una relación lineal entre el número de habitaciones y el precio. 
+
+\newpage
+```{r}
+plot(california_original$HousingMedianAge, california_original$MedianHouseValue, main = "Influencia de la edad en el precio", xlab = "Edad del inmueble", ylab = "Precio final")
+```
+
+Esta variable tampoco tiene una relación lineal como habíamos deducido. 
+
+\newpage
+```{r}
+plot(california_original$Population, california_original$MedianHouseValue, main = "Influencia del número de habitates en el precio", xlab = "Número de habitantes", ylab = "Precio final")
+```
+
+Esta variable tampoco tiene una relación lineal con la salida, pero tiene una forma similar al gráfico del número de habitaciones. 
+
+\newpage
+Para calcular la distancia al centro como hemos planteado en la hipótesis 4 tenemos que calcular un centro. Pero antes de eso miremos como se comportan las variables longitud y latitud por separado con respecto de la salida.
+
+```{r}
+plot(california_original$Latitude, california_original$MedianHouseValue, main = "Influencia de la latitud en el precio", xlab = "Latitud", ylab = "Precio final")
+
+plot(california_original$Longitude, california_original$MedianHouseValue, main = "Influencia de la longitud en el precio", xlab = "Longitud", ylab = "Precio final")
+```
+
+Claramente la relación latitud/longitud con el precio finla no es lineal, pero el hecho de que existan varios picos me hace pensar que puede haber varias ciudades con lo que calcular la media para establecerlo como centro no es una buena opción.
+
+\newpage
+```{r}
+plot(california_original$MedianIncome, california_original$MedianHouseValue, main = "Influencia de la media de los ingresos en el precio", xlab = "Media de ingresos", ylab = "Precio final")
+```
+
+Puede ser una relación lineal con una dispersión muy alta, debido probablemente a la existencia de varias ciudades en el conjunto de datos.
+
+Ya solo queda comprobar que al aumentar el número de unidades familiares disminuye el precio. 
+\newpage 
+```{r}
+plot(california_original$Households, california_original$MedianHouseValue, main = "Influencia del número de unidades domésticas en el precio", xlab = "Unidades domésticas", ylab = "Precio final")
+```
+
+No sigue una distribución lineal pero por la forma que tiene la hipótesis de que a mayor número de unidades domésticas disminuye también es falsa. 
+
+
+##Conclusiones sobre las hipótesis previas.
+
+Tras ver la relación entre las variables de las hipótesis previas y la salida esperada,podemos llegar a las siguientes conclusiones:
+
+* El conjunto de datos recoge varias ciudades.
+* Al recoger varias ciudades las variables pueden presentar una tendencia lineal pero tener una amplia dispersión, relacionada con la ciudad en la que esté.
+** Se debería clusterizar el conjunto de datos por ciudades.Pero el ejercicio es de modelos lineales por lo que no nos vamos a meter en la elaboración de clusters. Eso sí se espera que el modelo de regresión lineal sea bastante malo y que el modelo KNN presente mejores resultados. 
+* La única variable estudiada hasta ahora que parece independiente de la ciudad es la media de ingresos. 
+
+##Comparación de todas las variables con la salida
+
+Ahora compararemos todas las variables con todas para tener una idea de las interacciones que pueden existir entre ellas. 
+
+```{r}
+attach(california_original)
+pairs(california_original)
+
+```
+
+Las variables _TotalRooms_, _TotalBedrooms_, _Population_ y _Households_ tienen una relación lineal entre ellas. 
+
+
