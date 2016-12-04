@@ -4,7 +4,8 @@ author: "Laura"
 date: "3 de diciembre de 2016"
 output:
   pdf_document: default
-  html_document: default
+  toc: true
+  theme: united
 ---
 
 ```{r setup, include=FALSE}
@@ -121,3 +122,99 @@ pairs(california_original)
 Las variables _TotalRooms_, _TotalBedrooms_, _Population_ y _Households_ tienen una relación lineal entre ellas. 
 
 
+#Construcción del modelo lineal 
+##Separación del conjunto de train
+
+Para comenzar a elaborar los modelos predictivos necesitamos separar los datos en train y test. En esta primera parte del ejercicio vamos a coger el 60% del conjunto para el entrenamiento y el 40% restante para validación. 
+
+```{r}
+train <- california_original[1:dim(california_original)[1]*0.6,]
+test <- california_original[dim(california_original)[1]*0.6:dim(california_original)[1],]
+
+detach(california_original)
+attach(train)
+```
+
+##Modelo lineal simple
+Una vez conocemos como se comportan las variables podemos plantear un modelo lineal que aproxime una solución a nuestro problema. 
+
+Podemos plantearlo como un modelo lineal de una sola variable, aunque sabemos que no va a ser un ajuste muy bueno pero de esta forma tendremos un parámetro de R cuadrada ajustada base para comparar más tarde. 
+
+La variable que se usará para este modelo es _MedianIncome_ porque presentaba una tendencia lineal, más independiente que las demás estudiadas en el apartado anterior. 
+```{r}
+model1_singleLineal <- lm(MedianHouseValue~MedianIncome)
+summary(model1_singleLineal)
+```
+
+El valor del parámetro R cuadrada es de **0.4675**, es bastante malo pero nos sirve como base para ir aumentando el número de variables que intervienen en el modelo de regresión lineal múltiple. 
+
+##Modelo lineal múltiple
+
+Las variables que vamos a añadir al modelo anterior serán _HouseHold, Population, TotalRooms,TotalBedRooms_ una a una comprobando siempre el coeficiente Rcuadrado para compararlo.
+
+```{r}
+model1_multipleLineal <- lm(MedianHouseValue~MedianIncome+Households)
+summary(model1_multipleLineal)
+```
+
+    Al añadir la variable Household la variación  ha sido mínima en el modelo, ha pasado de 0.4675 a 0.4703. 
+    Como las variables _Population, TotalRooms,TotalBedRooms_ tenían todas una gráfica similar a _Households_ vamos a probar a añadirlas todas a la vez. 
+    
+
+```{r}
+model2_multipleLineal <- lm(MedianHouseValue~MedianIncome+Households+Population+TotalRooms+TotalBedrooms)
+summary(model2_multipleLineal)
+```
+
+Añadir estas variables ha conseguido una mejora de casi un 0.5% del modelo. Puesto que sabemos que las variable anteriores probablemente dependen de la longitud y la latitud la incorporaremos dichas variables al modelo.
+
+```{r}
+model3_multipleLineal <- lm(MedianHouseValue~MedianIncome+Households+Population+TotalRooms+TotalBedrooms+Longitude+Latitude)
+summary(model3_multipleLineal)
+```
+
+##Modelos con interacciones y polinomiales
+
+Añadir las variables longitud y latitud al modelo ha supuesto una notable mejora al modelo, pero vamos a añadir una nueva variable que sea una interacción de la longitud y la latitud a ver si ayuda a mejorar el modelo.
+
+```{r}
+model4_multipleLineal <- lm(MedianHouseValue~MedianIncome+Households+Population+TotalRooms+TotalBedrooms+Longitude+Latitude+(Longitude*Latitude))
+summary(model4_multipleLineal)
+```
+
+La mejora del modelo es mínima y además aparece la variable latitud como la menos significativa del conjunto.Dicha variable aunque la quitemos seguirá apareciendo porque tenemos el témino Longitud*Latitud que necesita de los términos de las dos componentes por separado, por ello se desarrollará un modelo por la vía polinomial.
+
+Dado que las variables longitud y latitud visualizado con la gráfica adquieren una forma con varias cimas, podemos probar a utilizar el modelo anterior con polinomios sobre las variables latitud y longitud. 
+
+Vamos a poner un polinomio de grado 10 en cada una de las variables para comprobar en que momento deja de ser interesante el miembro del polinomio.
+
+
+```{r}
+model5_multipleLineal <- lm(MedianHouseValue~MedianIncome+Households+Population+TotalRooms+TotalBedrooms+Longitude+Latitude+poly(Longitude,10)+poly(Latitude,10))
+summary(model5_multipleLineal)
+```
+
+Un polinomio de grado 10 en las variables longitud y latitud tiene la gran mayoría de sus componentes como significativos para el ajuste de la función a los datos. Pero hay algunos miembros como el de grado 3 en la variable latitud y el de grado 9 y 3 para la variable longitud que aparecen como nad significativas. Por esto y por simplicidad se va a regresar a la versión anterior del modelo.
+
+Aún podemos probar a elaborar un modelo polinómico en el que la variable sea la interacción entre la latitud y la longitud. Y al igual que en el modelo anterior vamos a realizar la prueba poniendo un polinomio de grado muy alto para ver la significatividad que tendrían cada uno de los polinomios.
+
+```{r}
+model6_multipleLineal <- lm(MedianHouseValue~MedianIncome+Households+Population+TotalRooms+TotalBedrooms+Longitude+Latitude+poly(Longitude*Latitude,10))
+summary(model6_multipleLineal)
+```
+
+El modelo mejora, poco pero mejora. Puesto que no todos los miembros del polinomio tienen un nivel de significación suficiente se probará con modelos donde el polinomio sea menor. 
+
+```{r}
+model7_multipleLineal <- lm(MedianHouseValue~MedianIncome+Households+Population+TotalRooms+TotalBedrooms+Longitude+Latitude+poly(Longitude*Latitude,5))
+summary(model7_multipleLineal)
+```
+
+Aún aparece el miembro de grado 3 como poco significativo por lo que vamos a reducir el grado del polinomio a 3, aprovechando que solamente se perdieron unas centésimas en el valor de R al cuadrado. 
+
+```{r}
+model8_multipleLineal <- lm(MedianHouseValue~MedianIncome+Households+Population+TotalRooms+TotalBedrooms+Longitude+Latitude+poly(Longitude*Latitude,3))
+summary(model8_multipleLineal)
+```
+
+No ha sido una buena idea puesto que se ha perdido un 0.2 en el valor de R^2 
