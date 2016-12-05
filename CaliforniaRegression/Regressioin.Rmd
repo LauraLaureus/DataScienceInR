@@ -128,8 +128,8 @@ Las variables _TotalRooms_, _TotalBedrooms_, _Population_ y _Households_ tienen 
 Para comenzar a elaborar los modelos predictivos necesitamos separar los datos en train y test. En esta primera parte del ejercicio vamos a coger el 60% del conjunto para el entrenamiento y el 40% restante para validación. 
 
 ```{r}
-train <- california_original[1:dim(california_original)[1]*0.6,]
-test <- california_original[dim(california_original)[1]*0.6:dim(california_original)[1],]
+train <- california_original[1:(dim(california_original)[1]*0.6),]
+test <- california_original[(dim(california_original)[1]*0.6):dim(california_original)[1],]
 
 detach(california_original)
 attach(train)
@@ -138,7 +138,7 @@ attach(train)
 ##Modelo lineal simple
 Una vez conocemos como se comportan las variables podemos plantear un modelo lineal que aproxime una solución a nuestro problema. 
 
-Podemos plantearlo como un modelo lineal de una sola variable, aunque sabemos que no va a ser un ajuste muy bueno pero de esta forma tendremos un parámetro de R cuadrada ajustada base para comparar más tarde. 
+Podemos plantearlo como un modelo lineal de una sola variable, aunque sabemos que no va a ser un ajuste muy bueno pero de esta forma tendremos un parámetro de R^2 ajustada base para comparar más tarde. 
 
 La variable que se usará para este modelo es _MedianIncome_ porque presentaba una tendencia lineal, más independiente que las demás estudiadas en el apartado anterior. 
 ```{r}
@@ -146,7 +146,7 @@ model1_singleLineal <- lm(MedianHouseValue~MedianIncome)
 summary(model1_singleLineal)
 ```
 
-El valor del parámetro R cuadrada es de **0.4675**, es bastante malo pero nos sirve como base para ir aumentando el número de variables que intervienen en el modelo de regresión lineal múltiple. 
+El valor del parámetro R^2 es de **0.4681**, es bastante malo pero nos sirve como base para ir aumentando el número de variables que intervienen en el modelo de regresión lineal múltiple. 
 
 ##Modelo lineal múltiple
 
@@ -157,7 +157,7 @@ model1_multipleLineal <- lm(MedianHouseValue~MedianIncome+Households)
 summary(model1_multipleLineal)
 ```
 
-    Al añadir la variable Household la variación  ha sido mínima en el modelo, ha pasado de 0.4675 a 0.4703. 
+    Al añadir la variable Household la variación  ha sido mínima en el modelo, ha pasado de 0.4681 a 0.4703. Aunque a partir de ahora deberemos fijarnos en el valor de R^2 ajustada ya que atiende al número de variables que se usan en el modelo. 
     Como las variables _Population, TotalRooms,TotalBedRooms_ tenían todas una gráfica similar a _Households_ vamos a probar a añadirlas todas a la vez. 
     
 
@@ -210,11 +210,71 @@ model7_multipleLineal <- lm(MedianHouseValue~MedianIncome+Households+Population+
 summary(model7_multipleLineal)
 ```
 
-Aún aparece el miembro de grado 3 como poco significativo por lo que vamos a reducir el grado del polinomio a 3, aprovechando que solamente se perdieron unas centésimas en el valor de R al cuadrado. 
+Aún aparece el miembro de grado 3 como poco significativo por lo que vamos a reducir el grado del polinomio a 3, aprovechando que solamente se perdieron unas centésimas en el valor de R^2. 
 
 ```{r}
 model8_multipleLineal <- lm(MedianHouseValue~MedianIncome+Households+Population+TotalRooms+TotalBedrooms+Longitude+Latitude+poly(Longitude*Latitude,3))
 summary(model8_multipleLineal)
 ```
 
-No ha sido una buena idea puesto que se ha perdido un 0.2 en el valor de R^2 
+No ha sido una buena idea puesto que se ha perdido un 0.2 en el valor de R^2, sin embargo este nuevo valor de R^2 es similar a la del modelo 3 que era mucho más simple y sencillo de explicar. 
+
+Por tanto es con este modelo 3 con el que vamos a realizar las pruebas con el conjunto de test.
+
+##Predicción de valores
+
+   Ahora que tenemos escogido el modelo lo probaremos sobre el conjunto de datos que hemos apartado como conjunto de test.
+   
+```{r}
+yprime <- predict(model4_multipleLineal,test)
+sqrt(sum(abs(test$MedianHouseValue-yprime)^2)/length(yprime))
+```
+
+Lo que nos devuelve la última llamada es el _root-mean-square-error(RMSE)_ también conocido como la raíz del error cuadrático medio, similar a la desviación standar de la predicción. 
+
+El valor anterior es semejante a la décima parte del valor máximo que puede tomar el valor de las casas. Pero es el mejor modelo lineal que hemos obtenido. 
+
+##Explicación del modelo lineal
+
+En el modelo lineal escogido intervienen todas las variables registradas, es decir, en el precio final de una vivienda interviene la media de los ingresos de la zona, el número de unidades domésticas en el inmueble, el número de habitantes, el número total de habitaciones y de dormitorios así como la ciudad en la que está que se descompone en longitud y latitud. 
+
+#Regresión usando KNN
+
+La técnica de los k-vecinos más cercanos nos permite crear devolver un valor de predicción basándonos en los datos ya existentes.
+
+##Paquetes necesarios
+
+Para utilizar la técnica del vecino más cercano tenemos que utilizar funciones de la librería knn y MASS por lo que le indicamos a R que las necesitamod
+
+```{r}
+require("MASS")
+require("kknn")
+```
+
+##Creando el modelo
+
+Ahora para crear el modelo realizamos la llamada a la funcion knn con la base de datos de california completa. 
+
+En este caso el número de vecinos más cercanos que se escogerán será de 7 y la distancia euclídea y se realizará el escalado de los datos para que tengan todos el mismo rango de valores. 
+
+```{r}
+fitknn1 <- kknn(california_original$MedianHouseValue ~ ., california_original,california_original)
+
+```
+
+Este nuevo modelo tendrá en su componente "fitted.values" los valores obtenidos en la fase de test. 
+
+Antes de calcular su bondad vamos a visualizar los resultados.
+
+```{r}
+plot(california_original$MedianHouseValue~california_original$MedianIncome)
+points(california_original$MedianIncome,fitknn1$fitted.values,col="blue",pch=20)
+```
+
+No es un modelo perfecto pero es bastante bueno. Para compararlo con el mejr de los lineales vamos a calcular el RMSE
+
+```{r}
+yprime_2 = fitknn1$fitted.values
+sqrt(sum((california_original$MedianHouseValue - yprime_2)^2)/length(yprime_2))
+```
+Como podemos ver el RMSE es significativamente menor que el obtenido por el considerado el mejor modelo de regression lineal múltiple, que tenía  de ,valor RMSE 71274.62
