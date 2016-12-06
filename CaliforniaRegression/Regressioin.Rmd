@@ -278,3 +278,36 @@ yprime_2 = fitknn1$fitted.values
 sqrt(sum((california_original$MedianHouseValue - yprime_2)^2)/length(yprime_2))
 ```
 Como podemos ver el RMSE es significativamente menor que el obtenido por el considerado el mejor modelo de regression lineal múltiple, que tenía  de ,valor RMSE 71274.62
+
+Comprobemos que este error sigue bajando si le ponemos un modelo semejante al que desarrollamos con el modelo lineal múltiple si añadimos polinomios de un grado superior, en este caso vamos a añadir un polinomo de grado 3 y de grado 5 para ver la evolución del error. 
+
+```{r}
+fitknn2 <-kknn(california_original$MedianHouseValue ~ . + poly(california_original$Latitude*california_original$Longitude,3), california_original,california_original)
+yprime_3 = fitknn2$fitted.values
+sqrt(sum((california_original$MedianHouseValue - yprime_3)^2)/length(yprime_3))
+```
+
+```{r}
+fitknn3 <-kknn(california_original$MedianHouseValue ~ . + poly(california_original$Latitude*california_original$Longitude,5), california_original,california_original)
+yprime_4 = fitknn3$fitted.values
+sqrt(sum((california_original$MedianHouseValue - yprime_4)^2)/length(yprime_4))
+```
+
+Vemos en los resultados anteriores que al igual que los modelos homólogos del apartado anterior podemos ver una mejora del error.Pero mejor ilustrarlo con un gráfico:
+```{r}
+plot(california_original$MedianHouseValue ~ california_original$MedianIncome, pch = 20 , main = "Comparación entre modelos Knn")
+
+points(california_original$MedianIncome, fitknn1$fitted.values, col="red",pch = 20)
+points(california_original$MedianIncome, fitknn2$fitted.values, col="green",pch = 20)
+points(california_original$MedianIncome, fitknn3$fitted.values, col="orange",pch = 20)
+
+```
+
+En color negro tenemos los datos originales, en rojo el primer modelo creado en el que solo intervienen todas las variables sin ningún tipo de no linealidad, en color verde tenemos el mismo modelo con un polinomio de grado 3 para la combinación de longitud y latitud y en naranja el modelo anterior pero de grado 5.
+
+En todos los casos los modelos parecen bastante buenos, pero ninguno de ellos recogen los valores de la parte superior izquierda de la gráfica ni los de la parte inferior izquierda y les cuesta acertar con los valores dispersos del lado derecho. 
+
+El modelo con el polinomio de grado 5, tiene un menor error, pero por simplicidad nos quedamos con el modelo que no tiene ningún tipo de polinomio de grado superior a 2 en el modelo. 
+
+#Validación cruzada 
+
