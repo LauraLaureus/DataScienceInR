@@ -1,0 +1,14 @@
+---
+title: "ICD_ProyectoFinal"
+author: "Laura del Pino Díaz"
+date: "15/12/2016"
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
