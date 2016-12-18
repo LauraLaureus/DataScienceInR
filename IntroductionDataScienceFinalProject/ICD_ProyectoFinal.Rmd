@@ -157,5 +157,70 @@ TODO concluir smthing
 
 ##Wizmir (Weather of Izmir)
 
+La base de datos de _Weather of Izmir_ contiene datos referentes a distintas variables relacionadas con el tiempo aatmosférico, a saber:
 
-   
+*  Temperatura máxima (Max_temperature) real[36.7,105.0]
+*  Temperatura mínima (Min_temperature) real[15.8,78.6]
+*  Rocío (Dewpoint) real[13.6,64.4]
+*  Precipitación (Precipitation) real[0.0,7.6]
+*  Presión a nivel del mar (Sea_level_pressure) real[29.26,30.48]
+*  Presión normal (Standard_pressure) real[2.3,10.1]
+*  Visibilidad (Visibility) real[0.92,29.1]
+*  Velocidad del viento (Wind_speed) real[4.72,68.8]
+*  Velocidad máxima del viento (Max_wind_speed) real[16.11,55.24]
+*  Temperatura media (Mean_temperature) real[29.4,89.9]
+
+El objetivo con esta base de datos es calcular la temperatura media a partir de las demás variables de datos. 
+
+Al contrario que el conjunto de datos anterior, los nombre de las variables son descriptivos lo que nos permite formular hipótesis antes de visualizar los datos.
+
+###Hipótesis previas
+
+Las hipótesis previas nos permite son una primera aproximación del modelo de datos, nos permite crear los primeros modelos a partir de los cuales iterar para obtener un mejor resultado. 
+
+1. La temperatura media es un modelo lineal en el que intervienen la temperatura mínima y la temperatura máxima. Posiblemente 0.5xtemperatura mínima + 0.5xtemperatura máxima,por la propia definición de media. 
+2. Por la ley física que relaciona la temperatura y la presión, a mayor presión mayor temperatura. No se espera que esta ley se cumpla por completo ya que está estipulada para gases de volumen constante, por esto tanto la presión como la presión a nivel del mar tienen que ver en cierta medida con la temperatura. 
+3. La velocidad del viento y la velocidad máxima del mismo, no intervienen o lo hacen en una medida despreciable, puesto que son factores que intervienen más en la sensación térmica que en la propia temperatura. 
+4. El rocío y las precipitaciones, tienen que ver más como consecuencia de la temperatura que como factor generador de la temperatura, no se descarta su intervención pero se espera que sea mínima. 
+5. Sobre la visibilidad, no sabemos que comportamiento tendrá puesto que en ocasiones hay poca visibilidad a causa de  bancos de niebla que se generan por las altas temperaturas, pero en ciertas zonas del planeta puede ser por polvo en suspensión traido por el viento, que genera que haya mayor temperatuda, por ello como actuará esta variable en el modelo es todo un misterio.
+
+Ahora con estas hipótesis previas, procedemos a estudiar las variables, que en este caso son solo numéricas, con respecto de la salida. 
+
+###Variables numéricas.
+
+En primer lugar vamos a cargar el dataset.
+
+```{r}
+wizmir <- read.csv("./WizmirRegression/wizmir/wizmir.dat", header = FALSE, comment.char = "@")
+names(wizmir) <- c("Max_temperature","Min_temperature","Dewpoint","Precipitation","Sea_level_pressure","Standar _pressure","Visibility","Wind_speed","Wind_max_speed","Mean_temperature")
+```
+Tras ello vamos a obtener los principales estadísticos del conjunto:
+
+```{r}
+summary(wizmir)
+```
+
+Exceptuando las variables de precipitación (Precipitation) y la presión normal (Standar_pressure) podemos decir que todas las variables se mueven en el mismo rango de 20-100 aproximadamente por lo que si se generase un modelo que no tuviese dichas variables podríamos evitar el paso intermedio de normalizar las variables para igualar el rango. 
+
+Nos queda por conocer la desviación estándar de los datos:
+```{r}
+wizmir_std <- apply(wizmir[,],2,sd)
+wizmir_std
+```
+
+Viendo las desviaciones típicas de la temperatura mínima y máxima tener un valor tan cercano al de la temperatura media, que es el valor que tenemos que obtener, me hace pensar que podrían compartir distribución. 
+
+\newpage
+Si representamos el valor de todas las variables con respecto de la salida obtenemos los siguientes gráficos
+
+```{r fig.align="center"}
+plot(wizmir, main =  "Relación de las variables entre ellas")
+```
+
+Primero, nos vamos a concentrar en la última fila de la ilustración anterior, en ella están reflejadas todas las variables como variable de "entrada" o variable independiente y la variable de salida como variable independiente. En esta fila podemos ver que las variables de temperatura máxima y mínima tienen una relación lineal con la temperatura media, como era de esperar por la hipótesis 1, pero además esta tendencia lineal también la tiene la variable de rocío que puede ser debido a que el rocío es dependiente de la temperatura mínima,como se ve en la relación entre estas dos variables (y en la relación de la variable rocío con la temperatura máxima también) pero es un detalle a tener en cuenta a la hora de elaborar un modelo. 
+
+Otras variables que podrían intervenir en el modelo de una forma, no tan claramente lineal o incluso de orden superior, son la presión a nivel del mar y la velocidad máxima del viento, puesto que dentro de la nube de puntos se puede dibujar una recta decreciente e incluso una curva.
+
+El resto de variables la nube de puntos tiene tal dispersión que podrían no intervenir porque no se ve una función definida que encaje con los datos. 
+
+Como conclusión de estos datos diría que el mejor modelo para predecir la temperatura media es un modelo de regresión lineal donde intervengan las variables de temperatura máxima y mínima y habría que estudiar si añadir la variable de rocío supone alguna mejora. 
