@@ -58,15 +58,30 @@ names(australian) <- c("A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11",
 # Solo las clases numéricas 
 numerical_stats <- summary(australian[,c(-1,-4,-8,-9,-11,-12,-15)]) 
 numerical_std <- apply(australian[,c(-1,-4,-8,-9,-11,-12,-15)],2,sd)
-
+numerical_stats
+numerical_std
 ```
 
  Como podemos ver las variables con mayor varianza son la variable A2,A3,A7 y A14 que tienen su valor en las unidades de millar. 
- Vamos a comparar las variables con la salida que está en la variable A15
+ Vamos a comparar las variables con la salida que está en la variable A15. 
+ La comparación de varianzas nos ayuda a la hora de comprobar que variables tienen una varianza similar, hecho que resulta interesante para algoritmos como LDA donde se tiene como suposición que la varianza es la misma o muy similar. Por esto ante un modelo para LDA deberíamos considerar las variables A5 y A10 que tienen un valor muy similar, o las variables A2 y A7. 
+ 
+ La otra hipótesis que necesita el algoritmo LDA es que las variables siguen una distribución normal. Para mostrar esta característica con las variables A5, A10, A2 y  A7 realizaremos un diagrama Q-Q y consideraremos que siguen una distribución normal si los gráficos son similares a una línea recta.
+```{r}
+qqnorm(australian[,5], main="QQ para la variable A5")
+qqnorm(australian[,10], main="QQ para la variable A10")
+```
+ La variable A5 si parece seguir una distribución normal, pero la variable con la que comparte la varianza A10 no la sigue. 
+
+```{r}
+qqnorm(australian[,2], main="QQ para la variable A2")
+qqnorm(australian[,7], main="QQ para la variable A5")
+```
+
+ La variable A2, puede seguir una distribución normal pero el punto de ruptura que tiene me desconcierta. Sin embargo queda claro que la variable A7 no sigue una distribución normal.
  
 ```{r}
 pairs(australian[,c(-1,-4,-8,-9,-11,-12)], main = "Comparación de las variables numéricas con la salida")
-#TODO legend
 ```
 
   Puesto que es una base de datos para clasificación con dos clases tiene sentido que en todas ellas aparezcan las dos columnas. Pero verlas así en pequeño no nos permite deducir si esa variable aporta mucho o poco a la salida, por lo que vamos a realizar unos plots para analizar mejor los datos. 
@@ -82,7 +97,7 @@ plot(australian[,13],australian[,15], main = "Comparación A13 con la salida")
 plot(australian[,14],australian[,15], main = "Comparación A15 con la salida")
 ```
 
-  No podemos decir que ninguna de las variables numéricas sea realmente discriminante para la salida. Sin embargo, no descartaría la variable 14 para que intervenga un modelo de clasificación, porque para valores altos solamente da salida positiva, es decir con valor 1.
+  No podemos decir que ninguna de las variables numéricas sea realmente discriminante para la salida. Sin embargo, no descartaría la variable 14 para que intervenga un modelo de clasificación, porque para valores altos solamente da salida positiva para la clase 1.
 
   Volvermos a representar las variables ahora dejando la variable de salida fuera
 ```{r}
@@ -95,7 +110,7 @@ pairs(australian[,c(-1,-4,-8,-9,-11,-12,-15)], main = "Comparación de las varia
 
 ####Variables categóricas. 
 
-  Las variables catergóricas merecen un estudio propio puesto que estadísticos como la media o la desviación típica no tienen un valor interesante ya que no tiene sentido si tenemos las clases 1,2,3 y que la clase media sea 2,2. Por ello los estadísticos que vamos a usar en esta sección son los cuartiles, el valor más frecuente. 
+  Las variables catergóricas merecen un estudio propio puesto que estadísticos como la media o la desviación típica no tienen un valor interesante ya que no tiene sentido si tenemos las clases 1,2,3 y que la clase media sea 2,2. Por ello los estadísticos que vamos a usar en esta sección son los cuartiles y  el valor más frecuente o moda. 
   
 ```{r}
 categorical_stats <- summary(australian[,c(1,4,8,9,11,12)])
@@ -147,13 +162,15 @@ hist(australian[which(australian[,15] == 1),11], col=rgb(0,0,1,0.4), add = T)
 legend("topright",legend = c("A11 cuando la salida es 0", "A11 cuando la salida es 1"),  text.width = 1.2, col = c("red","blue"), pch = 16, cex=.8)
 
 
- hist(australian[which(australian[,15] == 0),12], col=rgb(1,0,0,1),main ="Frecuencia de la variable A1", ylab = "Frecuencia", xlab = "Categoría")
+ hist(australian[which(australian[,15] == 0),12], col=rgb(1,0,0,1),main ="Frecuencia de la variable A12", ylab = "Frecuencia", xlab = "Categoría")
 hist(australian[which(australian[,15] == 1),12], col=rgb(0,0,1,0.4), add = T)
 legend("topright",legend = c("A12 cuando la salida es 0", "A12 cuando la salida es 1"),  text.width = 0.8, col = c("red","blue"), pch = 16, cex = .8)
 
 ```
 
-TODO concluir smthing
+Viendo las gráficas anteriores, vemos que la gran mayoría de las variables no discriminan bien la salida, pero las variables A8 y A9 di que discriminan bien la mayoría de los casos. 
+
+De este estudio solo podemos concluir que pueden actuar como buenos discriminantes las variables categóricas A8 y A9 así como la variable A14. A primera vista no esperaría buenos resultados de ningún modelo, excepto dle KNN que al ajustarse mejor a los datos puede ser más flexible.
 
 ##Wizmir (Weather of Izmir)
 
