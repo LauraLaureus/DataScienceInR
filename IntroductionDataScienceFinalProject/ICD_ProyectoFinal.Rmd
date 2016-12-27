@@ -5,7 +5,7 @@ date: "15/12/2016"
 output: 
   pdf_document:
     toc: true
-    toc_depth: 4
+    toc_depth: 5
 ---
 
 ```{r setup, include=FALSE}
@@ -22,13 +22,13 @@ En este proyecto vamos a realizar un análisis de dos bases de datos: la base de
  
 #Las bases de datos
 
-En este apartado estudiaremos en la medida de lo posible las bases de datos asignadas para cada uno de los problemas. 
+En este apartado estudiaremos las bases de datos _Australian Credit Approval(abreviado australian)_ para el problema de clasificación y _Weather of Izmir(abreviado wizmir)_ para el problema de regresión. 
 
 ##Australian (Australian Credit Approval)
 
 La base de datos _australian credit approval_ tiene 15 atributos de los cuales actúan como predictores 14. 
 
-Los atributos de esta base de datos en particular no tienen un nombre descriptivo que te permita conocer que es lo que representan los datos por razones de confidencialidad, tal y como se detalla en la página de [UCI](http://archive.ics.uci.edu/ml/datasets/Statlog+%28Australian+Credit+Approval%29). Lo que si conocemos es el tipo de variable que componen la base de datos y el intervalo o valores que puede tomar cada variable y se enlistan a continuación. 
+Los atributos de esta base de datos en particular no tienen un nombre descriptivo que te permita conocer que es lo que representan los datos por razones de confidencialidad, tal y como se detalla en la página de [UCI](http://archive.ics.uci.edu/ml/datasets/Statlog+%28Australian+Credit+Approval%29). Lo que si conocemos es el número de observaciones, 690, y los diferentes tipos de variables que componen la base de datos y el intervalo o valores que puede tomar cada variable y se enlistan a continuación. 
 
 * A1 nominal  {0, 1}
 * A2 real [16.0,8025.0]
@@ -46,72 +46,139 @@ Los atributos de esta base de datos en particular no tienen un nombre descriptiv
 * A14 entero [1,100001]
 * Class nominal {0,1}
 
-  Dado la no descriptividad de los nombres no podemos realizar hipótesis previas sobre la base de datos. Por lo que procedemos a realizar un estudio de los principales estadísticos de cada variables. 
-  
-###Estudio de los principales estadísticos del conjunto de datos Australian
 
-####Variables numéricas
-Cargamos la base de datos y miramos los cuartiles, valores máximos y desviación standart de las variables numéricas.
+  Dado la no descriptividad de los nombres no podemos realizar hipótesis previas sobre la base de datos. Por lo que procedemos a realizar un estudio de los principales estadísticos de cada variables. Este estudio lo haremos en dos partes: una parte dedicada a las variables numéricas y otra parte dedicada a las variables categóricas. 
+  
 ```{r}
 australian <- read.csv("./AustralianClassification/australian/australian.dat", comment.char = "@", header = FALSE)
 names(australian) <- c("A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11","A12","A13","A14","A15")
-# Solo las clases numéricas 
-numerical_stats <- summary(australian[,c(-1,-4,-8,-9,-11,-12,-15)]) 
-numerical_std <- apply(australian[,c(-1,-4,-8,-9,-11,-12,-15)],2,sd)
+
+numerical_australian <- australian[,c(-1,-4,-8,-9,-11,-12,-15)]
+categorical_australian <- australian[,c(1,4,8,9,11,12)]
+output_australian <- australian[,15]
+```
+
+\newpage
+
+
+###Estudio de las variables numéricas
+
+Son varios los parámetros que que nos permiten conocer con más detalle la base de datos aunque no se tenga un nombre descriptivo para cada una de las variables, ejemplo de esto es el número de valores perdidos, la media,mediana, moda y cuartiles.
+Así mismo se hace necesario comprobar algunas asumciones que hacen determinados algoritmos que emplearemos en este problema de clasificación, como son los test de normalidad del conjunto de datos (para el algoritmo LDA y QDA) y la igualdad de las varianzas (para el algoritmo LDA).
+
+####Estudio del número de valores perdidos
+En la página web de la base de datos de _Australian Credit Approval_ se indica que la base de datos tiene valores perdidos, en esta sección vamos a comprobar qué variables tienen esos valores perdidos. 
+
+```{r}
+numerical_australian_na <- apply(is.na(numerical_australian),2,sum)
+numerical_australian_na
+```
+
+Puesto que en las variables numéricas no hay valores perdidos, podemos seguir el estudio con las variables en este estado sin necesidad de imputar valores. 
+
+####Estadísticos principales
+
+```{r}
+
+numerical_stats <- summary(numerical_australian) 
+numerical_std <- apply(numerical_australian,2,sd)
+numerical_stats <- rbind(numerical_stats, numerical_std)
 numerical_stats
-numerical_std
 ```
 
- Como podemos ver las variables con mayor varianza son la variable A2,A3,A7 y A14 que tienen su valor en las unidades de millar. 
- Vamos a comparar las variables con la salida que está en la variable A15. 
- La comparación de varianzas nos ayuda a la hora de comprobar que variables tienen una varianza similar, hecho que resulta interesante para algoritmos como LDA donde se tiene como suposición que la varianza es la misma o muy similar. Por esto ante un modelo para LDA deberíamos considerar las variables A5 y A10 que tienen un valor muy similar, o las variables A2 y A7. 
+ Como podemos ver las variables con mayor varianza son la variable A2,A3,A7 y A14 debido a que los rangos que puede tomar dicha variable son mayores. 
  
- La otra hipótesis que necesita el algoritmo LDA es que las variables siguen una distribución normal. Para mostrar esta característica con las variables A5, A10, A2 y  A7 realizaremos un diagrama Q-Q y consideraremos que siguen una distribución normal si los gráficos son similares a una línea recta.
-```{r}
-qqnorm(australian[,5], main="QQ para la variable A5")
-qqnorm(australian[,10], main="QQ para la variable A10")
-```
- La variable A5 si parece seguir una distribución normal, pero la variable con la que comparte la varianza A10 no la sigue. 
+ Algunos algoritmos como LDA y QDA realizan suposiciones sobre las variables que reciben a la entrada. En el caso LDA supone que los conjuntos que discriminan tienen la misma varianza y son poblaciones normalmente distribuidas. 
 
+####Test de normalidad
+
+ Establezcamos como hipótesis nula que todas las variables numéricas pertenecen a una misma distribución. Para comprobarlo realizaremos el test no paramétrico de Kruskal Wallis.
 ```{r}
-qqnorm(australian[,2], main="QQ para la variable A2")
-qqnorm(australian[,7], main="QQ para la variable A5")
+kruskal.test(numerical_australian)
 ```
 
- La variable A2, puede seguir una distribución normal pero el punto de ruptura que tiene me desconcierta. Sin embargo queda claro que la variable A7 no sigue una distribución normal.
- 
+ Puesto que el p-value es menor que 0.05 rechazamos la hipótesis de que todas las variables siguen la misma distribución. 
+ Necesitamos encontrar aquellas variables que sí que sigan una distribución normal, para ello someteremos a todas al test de Shapiro-Wilk.
 ```{r}
-pairs(australian[,c(-1,-4,-8,-9,-11,-12)], main = "Comparación de las variables numéricas con la salida")
+numerical_australian_shapiro <- apply(numerical_australian,2,shapiro.test)
+numerical_australian_shapiro
+```
+
+  Dado que todos los p-value de todas las variables es menor que 0.05 deducimos que ninguna de las varibales sigue una distribución normal por lo que no se espera que ni el algoritmo LDA ni el algoritmo QDA funcionen bien para la clasificación. 
+\newpage
+ A continuación se muestran los gráficos de barras de todas las variables numéricas:
+  
+```{r}
+barplot(table(numerical_australian[,1]), main = "Frecuencia de los valores de A2",xlab = "Valor de A2", ylab = "Frecuencia")
+barplot(table(numerical_australian[,2]), main = "Frecuencia de los valores de A3",xlab = "Valor de A3", ylab = "Frecuencia")
+barplot(table(numerical_australian[,3]), main = "Frecuencia de los valores de A5",xlab = "Valor de A5", ylab = "Frecuencia")
+barplot(table(numerical_australian[,4]), main = "Frecuencia de los valores de A6",xlab = "Valor de A6", ylab = "Frecuencia")
+barplot(table(numerical_australian[,5]), main = "Frecuencia de los valores de A7",xlab = "Valor de A7", ylab = "Frecuencia")
+barplot(table(numerical_australian[,6]), main = "Frecuencia de los valores de A10",xlab = "Valor de A10", ylab = "Frecuencia")
+barplot(table(numerical_australian[,7]), main = "Frecuencia de los valores de A13",xlab = "Valor de A13", ylab = "Frecuencia")
+barplot(table(numerical_australian[,8]), main = "Frecuencia de los valores de A14",xlab = "Valor de A14", ylab = "Frecuencia")
+```
+Como ya habíamos visto de forma numérica, por las gráficas no se puede decir que ninguna de las variables numéricas sea una distribución normal. 
+
+\newpage
+####Información gráfica
+
+  Vamos a mostrar los valores que toman cada una de las variables y a compararlas entre ellas con un scartter plot.
+
+```{r}
+pairs(numerical_australian, main = "Comparación de las variables numéricas con la salida", pch = 16)
 ```
 
   Puesto que es una base de datos para clasificación con dos clases tiene sentido que en todas ellas aparezcan las dos columnas. Pero verlas así en pequeño no nos permite deducir si esa variable aporta mucho o poco a la salida, por lo que vamos a realizar unos plots para analizar mejor los datos. 
-  
+
+\newpage
 ```{r}
-plot(australian[,2],australian[,15], main = "Comparación A2 con la salida")
-plot(australian[,3],australian[,15], main = "Comparación A3 con la salida")
-plot(australian[,5],australian[,15], main = "Comparación A5 con la salida")
-plot(australian[,6],australian[,15], main = "Comparación A6 con la salida")
-plot(australian[,7],australian[,15], main = "Comparación A7 con la salida")
-plot(australian[,10],australian[,15], main = "Comparación A10 con la salida")
-plot(australian[,13],australian[,15], main = "Comparación A13 con la salida")
-plot(australian[,14],australian[,15], main = "Comparación A15 con la salida")
+plot(australian[,2],australian[,15], main = "Comparación A2 con la salida", pch = 16,xlab = "Variable A2", ylab = "Variable 15")
+plot(australian[,3],australian[,15], main = "Comparación A3 con la salida", pch = 16,xlab = "Variable A3",ylab = "Variable 15")
+plot(australian[,5],australian[,15], main = "Comparación A5 con la salida", pch = 16,xlab = "Variable A5",ylab = "Variable 15")
+plot(australian[,6],australian[,15], main = "Comparación A6 con la salida", pch = 16,xlab = "Variable A6",ylab = "Variable 15")
+plot(australian[,7],australian[,15], main = "Comparación A7 con la salida", pch = 16,xlab = "Variable A7",ylab = "Variable 15")
+plot(australian[,10],australian[,15], main = "Comparación A10 con la salida", pch = 16,xlab = "Variable A10",ylab = "Variable 15")
+plot(australian[,13],australian[,15], main = "Comparación A13 con la salida", pch = 16,xlab = "Variable A13",ylab = "Variable 15")
+plot(australian[,14],australian[,15], main = "Comparación A15 con la salida", pch = 16,xlab = "Variable A14",ylab = "Variable 15")
 ```
 
   No podemos decir que ninguna de las variables numéricas sea realmente discriminante para la salida. Sin embargo, no descartaría la variable 14 para que intervenga un modelo de clasificación, porque para valores altos solamente da salida positiva para la clase 1.
 
+####Estudio de las correlaciones
   Volvermos a representar las variables ahora dejando la variable de salida fuera
 ```{r}
-pairs(australian[,c(-1,-4,-8,-9,-11,-12,-15)], main = "Comparación de las variables numéricas entre ellas",col=ifelse(australian[,15]== 1,"red","blue"))
+pairs(australian[,c(-1,-4,-8,-9,-11,-12,-15)], main = "Comparación de las variables numéricas entre ellas",col=ifelse(australian[,15]== 1,"red","blue"), pch = 16)
 ```
 
    Aparentemente no hay relación entre las variables, lo que parece curioso es que cualquiera de las variables que interacciona con la variable 6 forma una nube de puntos que recuerda a un histograma. 
+
+   Vamos a comprobar de forma numérica que no existe esta correlación, para ello calcular la correlación entre todos los pares de variables
+```{r}
+  cor(numerical_australian,method = "pearson")
+```
+   Como ya pensábamos nos existe correlación significativa entre ningún par de variables, pero llama la atención la correlación del 0.4 entre la variable A5 y la variable A6.
 \newpage
 
 
-####Variables categóricas. 
+###Estudio de las variables categóricas. 
 
   Las variables catergóricas merecen un estudio propio puesto que estadísticos como la media o la desviación típica no tienen un valor interesante ya que no tiene sentido si tenemos las clases 1,2,3 y que la clase media sea 2,2. Por ello los estadísticos que vamos a usar en esta sección son los cuartiles y  el valor más frecuente o moda. 
+  Pero antes que nada vamos a estudiar si el conjunto de los datos categóricos continen valores pedidos
+
+####Estudio de los valores perdidos
+
+```{r}
+categorical_australian_na <- apply(is.na(cbind(categorical_australian,output_australian)),2,sum)
+categorical_australian_na
+```
+
+  Las variables categóricas no tienen valores perdidos, dado que en la página web de esta base de datos en UCI indica que si que tiene valores perdido, asumimos que la copia de la base de datos, obtenida de Prado,  que tenemos se le han imputado los valores perdidos antes de proporcionárnosla a los alumnos.
   
+####Estudio de los estadísticos principales
+ 
+ Como mencionamos anteriormente los estadísticos que nos interesan en estas variables categóricas son: el mínimo, el máximo, los cuartiles y la moda. Por suerte para nosotros todos estos valores los podemos obtener con un solo comando excepto la moda que la obtendremos aparte. 
+ 
 ```{r}
 categorical_stats <- summary(australian[,c(1,4,8,9,11,12)])
 categorical_stats <- categorical_stats[-4,]
@@ -132,25 +199,23 @@ categorical_stats <- rbind(categorical_stats, apply(australian[,c(1,4,8,9,11,12)
 categorical_stats
 ```
 
-\newpage
+
 La información anterior nos ilustra como se distribuye cada una de las variables pero no como se relacionan con la salida, para ello dibujaremos gráficos en donde comparamos la frecuencia de cada valor con respecto al valor que toma la salida. 
   
-```{r fig.align="center", fig.height=4}
-
+```{r fig.align="center", fig.height=6}
 hist(australian[which(australian[,15] == 0),1],col=rgb(1,0,0,1), main ="Frecuencia de la variable A1", ylab = "Frecuencia", xlab = "Categoría")
 hist(australian[which(australian[,15] == 1),1], col=rgb(0,0,1,0.4),add = TRUE)
 legend("topleft",legend = c("A1 cuando la salida es 0", "A1 cuando la salida es 1"),  text.width = 0.5, col = c("red","blue"), pch = 16)
 
 hist(australian[which(australian[,15] == 1),4], col=rgb(1,0,0,1), main ="Frecuencia de la variable A4", ylab = "Frecuencia", xlab = "Categoría")
 hist(australian[which(australian[,15] == 0),4], col=rgb(0,0,1,0.4), add = T)
-legend("topright",legend = c("A4 cuando la salida es 0", "A4 cuando la salida es 1"),  text.width = 0.8, col = c("red","blue"), pch = 16)
+legend("topright",legend = c("A4 cuando la salida es 0", "A4 cuando la salida es 1"),  text.width = 0.8, col = c("red","blue"), pch = 16) 
  
 
 
 hist(australian[which(australian[,15] == 0),8], col=rgb(1,0,0,1),main ="Frecuencia de la variable A8", ylab = "Frecuencia", xlab = "Categoría", xlim = c(0,3))
 hist(australian[which(australian[,15] == 1),8], col=rgb(0,0,1,0.4), add = T)
 legend("topright",legend = c("A8 cuando la salida es 0", "A8 cuando la salida es 1"),  text.width =1.2, col = c("red","blue"), pch = 16)
-
 
 
 hist(australian[which(australian[,15] == 0),9], col=rgb(1,0,0,1), main ="Frecuencia de la variable A9", ylab = "Frecuencia", xlab = "Categoría")
@@ -168,10 +233,11 @@ legend("topright",legend = c("A12 cuando la salida es 0", "A12 cuando la salida 
 
 ```
 
-Viendo las gráficas anteriores, vemos que la gran mayoría de las variables no discriminan bien la salida, pero las variables A8 y A9 di que discriminan bien la mayoría de los casos. 
+Viendo las gráficas anteriores, vemos que la gran mayoría de las variables no discriminan bien la salida, pero las variables A8 y A9 si que discriminan bien la mayoría de los casos. 
 
-De este estudio solo podemos concluir que pueden actuar como buenos discriminantes las variables categóricas A8 y A9 así como la variable A14. A primera vista no esperaría buenos resultados de ningún modelo, excepto dle KNN que al ajustarse mejor a los datos puede ser más flexible.
+De este estudio solo podemos concluir que pueden actuar como buenos discriminantes las variables categóricas A8 y A9 así como la variable A14. A primera vista no esperaría buenos resultados de ningún modelo, excepto del KNN que al ajustarse mejor a los datos puede ser más flexible.
 
+\newpage
 ##Wizmir (Weather of Izmir)
 
 La base de datos de _Weather of Izmir_ contiene datos referentes a distintas variables relacionadas con el tiempo aatmosférico, a saber:
@@ -211,7 +277,23 @@ En primer lugar vamos a cargar el dataset.
 wizmir <- read.csv("./WizmirRegression/wizmir/wizmir.dat", header = FALSE, comment.char = "@")
 names(wizmir) <- c("Max_temperature","Min_temperature","Dewpoint","Precipitation","Sea_level_pressure","Standar _pressure","Visibility","Wind_speed","Wind_max_speed","Mean_temperature")
 ```
-Tras ello vamos a obtener los principales estadísticos del conjunto:
+Tras ello vamos a obtener el número de valores perdidos que tenemos en el conjunto de datos.
+
+####Estudio de los valores perdidos
+
+```{r}
+wizmir_na <- apply(is.na(wizmir),2,sum)
+wizmir_na
+```
+Esta base de datos no tiene valores perdidos, lo que nos facilita el trabajo.
+
+####Test de normalidad
+
+ En este caso, el problema no es un problema de clasificación por lo que los algoritmos no hacen suposiciones de los datos de entrada como el caso anterior que necesitaba que los datos estuvieran normalmente distribuidos, por ello no vamos a realizar un estudio de la normalidad de los datos. 
+
+####Estudio de los principales estadísticos
+
+ La obtención de los principales valores estadísticos la obtenemos, como hemos visto en los casos anteriores, mediante la función summary. 
 
 ```{r}
 summary(wizmir)
@@ -225,13 +307,13 @@ wizmir_std <- apply(wizmir[,],2,sd)
 wizmir_std
 ```
 
-Viendo las desviaciones típicas de la temperatura mínima y máxima tener un valor tan cercano al de la temperatura media, que es el valor que tenemos que obtener, me hace pensar que podrían compartir distribución. 
+Viendo las desviaciones típicas de la temperatura mínima y máxima tener un valor tan cercano al de la temperatura media, que es el valor que tenemos que obtener, hace pensar que podrían compartir distribución. 
 
 \newpage
 Si representamos el valor de todas las variables con respecto de la salida obtenemos los siguientes gráficos
 
 ```{r fig.align="center"}
-plot(wizmir, main =  "Relación de las variables entre ellas")
+plot(wizmir, main =  "Relación de las variables entre ellas", pch = 16)
 ```
 
 Primero, nos vamos a concentrar en la última fila de la ilustración anterior, en ella están reflejadas todas las variables como variable de "entrada" o variable independiente y la variable de salida como variable independiente. En esta fila podemos ver que las variables de temperatura máxima y mínima tienen una relación lineal con la temperatura media, como era de esperar por la hipótesis 1, pero además esta tendencia lineal también la tiene la variable de rocío que puede ser debido a que el rocío es dependiente de la temperatura mínima,como se ve en la relación entre estas dos variables (y en la relación de la variable rocío con la temperatura máxima también) pero es un detalle a tener en cuenta a la hora de elaborar un modelo. 
@@ -240,4 +322,19 @@ Otras variables que podrían intervenir en el modelo de una forma, no tan claram
 
 El resto de variables la nube de puntos tiene tal dispersión que podrían no intervenir porque no se ve una función definida que encaje con los datos. 
 
-Como conclusión de estos datos diría que el mejor modelo para predecir la temperatura media es un modelo de regresión lineal donde intervengan las variables de temperatura máxima y mínima y habría que estudiar si añadir la variable de rocío supone alguna mejora. 
+####Estudio de correlación
+Una forma de comprobar que la variable _Dewpoint_ o punto de rocío está relacionada con la temperatura mínima y/o máxima está en la tabla de correlaciones:
+
+```{r}
+cor(wizmir[,-10], method = "pearson")
+```
+
+Las correlaciones que podemos ver del cuadrante anterior son:
+* La temperatura mínima y máxima están correlacionadas entre ellas.
+* El punto de rocío está relacionado tanto con las temperaturas máxima y mínima y en menor medida, y de forma inversa, con la presión a nivel del mar.
+* Tanto la temperatura máxima como mínima están relacionadas de forma inversa con la presión atmosférica a nivel del mar. 
+* La visibilidad y la presión estándar tienen una ligera correlación.
+* La visibilidad y la velocidad del viento están fuertemente correlacionadas. 
+
+
+Como conclusión de estos datos diría que el mejor modelo para predecir la temperatura media es un modelo de regresión lineal donde intervengan las variables de temperatura máxima y mínima y habría que estudiar si añadir las variables de rocío y presión a nivel del mar supone alguna mejora. 
