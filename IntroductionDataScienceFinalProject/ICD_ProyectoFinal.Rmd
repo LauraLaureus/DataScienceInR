@@ -338,3 +338,97 @@ Las correlaciones que podemos ver del cuadrante anterior son:
 
 
 Como conclusión de estos datos diría que el mejor modelo para predecir la temperatura media es un modelo de regresión lineal donde intervengan las variables de temperatura máxima y mínima y habría que estudiar si añadir las variables de rocío y presión a nivel del mar supone alguna mejora. 
+
+\newpage
+#Regresión
+  
+  La regresión es el proceso estadístico por el que se estiman la relación entre una o varias variables independientes o predictoras y la variable dependiente, dado un conjunto de datos de entrada. El objetivo de la regresión es obtener un modelo que permita predecir o estimar el valor que tendrá un nuevo dato a su salida, siendo este dato distinto de todos los anteriores que se usaron para crear el modelo.
+  Existen varios algoritmos para realizar regresión, pero en este trabajo solamente utilizaremos la regresión lineal simple, la regresión lineal múltiple y el algoritmo de los k- vecinos más cercanos. 
+  
+##Problema
+  Utilizaremos regresión para predecir la temperatura media de la ciudad de Izmir que hemos estudiado anteriormente. 
+   
+##Regresores elegidos
+   En el apartado de análisis de datos anterior pudimos ver que los mejores regresores para este problema son las variables:
+   
+* Temperatura máxima
+* Temperatura mínima
+
+  Pero vamos a realizar una prueba de regresión lineal simple con cinco regresores así que añadiremos a la lista:
+  
+* Punto de rocío
+* Presión a nivel del mar
+* Visibilidad
+
+##Modelo de regresión simple
+
+Con el modelo de regresión simple comprobamos que los datos se pueden explicar de la forma de una línea recta usando solamente una variable de predicción. La bondad de este modelo se pude medir por dos coeficientes: R^2 y el RMSE. El primer parámetro nos lo realizar la operación _summary_ sobre el modelo obtenido, pero el RMSE es preferible calcularlo a mano por ello definimos la siguiente función _rmse_.
+
+```{r}
+rmse <- function (original,algorithm_output){
+  sqrt(sum((original-algorithm_output)^2)/length(algorithm_output))
+}
+```
+
+Los modelos los crearemos haciendo uso de todos los datos del conjunto de datos
+
+```{r}
+lmModel_maxTemp = lm(wizmir$Mean_temperature ~ wizmir$Max_temperature)
+lmModel_minTemp = lm(wizmir$Mean_temperature ~ wizmir$Min_temperature)
+lmModel_dewPoint = lm(wizmir$Mean_temperature ~ wizmir$Dewpoint)
+lmModel_seaPressure = lm(wizmir$Mean_temperature ~ wizmir$Sea_level_pressure)
+lmModel_visibility = lm(wizmir$Mean_temperature ~ wizmir$Visibility)
+```
+
+Ahora obtendremos los dos parámetros de comparación:
+```{r}
+summary_maxTemp = summary(lmModel_maxTemp)
+rSquared_maxTemp = summary_maxTemp$r.squared
+adjusted_r_maxTemp = summary_maxTemp$adj.r.squared
+rmse_maxTemp = rmse(wizmir$Mean_temperature,lmModel_maxTemp$fitted.values)
+
+summary_minTemp = summary(lmModel_minTemp)
+rSquared_minTemp = summary_minTemp$r.squared
+adjusted_r_minTemp = summary_minTemp$adj.r.squared
+rmse_minTemp = rmse(wizmir$Mean_temperature,lmModel_minTemp$fitted.values)
+
+summary_dewPoint = summary(lmModel_dewPoint)
+rSquared_dewPoint = summary_dewPoint$r.squared
+adjusted_r_dewPoint = summary_dewPoint$adj.r.squared
+rmse_dewPoint = rmse(wizmir$Mean_temperature,lmModel_dewPoint$fitted.values)
+
+summary_seaPress = summary(lmModel_seaPressure)
+rSquared_seaPress = summary_seaPress$r.squared
+adjusted_r_seaPress = summary_seaPress$adj.r.squared
+rmse_seaPress = rmse(wizmir$Mean_temperature,lmModel_seaPressure$fitted.values)
+
+summary_visibility = summary(lmModel_visibility)
+rSquared_visibility = summary_visibility$r.squared
+adjusted_r_visibility = summary_visibility$adj.r.squared
+rmse_visibility = rmse(wizmir$Mean_temperature,lmModel_visibility$fitted.values)
+
+rSquared = c(rSquared_maxTemp,rSquared_minTemp,rSquared_dewPoint,rSquared_seaPress,rSquared_visibility)
+adjRSquared = c(adjusted_r_maxTemp,adjusted_r_minTemp,adjusted_r_dewPoint,adjusted_r_seaPress,adjusted_r_visibility)
+rmse_lm_results = c(rmse_maxTemp,rmse_minTemp,rmse_dewPoint,rmse_seaPress,rmse_visibility)
+
+linealSimpleModels_comparisonDataFrame = data.frame(rSquared,adjRSquared,rmse_lm_results)
+row.names(linealSimpleModels_comparisonDataFrame) <- c("MaxTemp", "MinTemp","DewPoint","SeaPressure","Visibility")
+linealSimpleModels_comparisonDataFrame
+```
+
+De esta tabla si miramos la columna de la R^2 ( _rSquared_ ) podemos ver que la temperatura máxima es el mejor regresor del conjunto puesto con un modelo lineal simple explica el 95% de los casos, seguido de cerca por la temperatura mínima que explica el 91% de los casos. El resto de regresores no son tan buenos. 
+
+La columna de la R^2 ajustada en este caso no tiene mucho sentido, puesto que es el parámetro de la R^2 ajustada al número de variables del modelo que en este caso es 1, pero se calcula para después poder comparar con el modelo de regresión múltiple. 
+
+El RMSE crece a medida que el modelo es peor en la prediccion de la salida, siendo de prácticamente 3 para el caso de la temperatura máxima y de prácticamente 14 para el caso de la visibilidad que solamente explica el 5% de los casos. 
+
+###Modelo de regresión lineal múltiple 
+
+%Comparar con los modelos anteriores
+###Modelo Knn con Cross-validation de 5-particiones
+###Comparación KNN con el modelo de regresión lineal múltiple
+####Con el modelo obenido anteriormente
+####Con un modelo en el que intervengan todas la variables y que utilice las 5 particiones
+###Comparación de algoritmos
+####Friedman
+####Holms
