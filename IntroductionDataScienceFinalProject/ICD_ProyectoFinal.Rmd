@@ -424,7 +424,89 @@ El RMSE crece a medida que el modelo es peor en la prediccion de la salida, sien
 
 ###Modelo de regresión lineal múltiple 
 
-%Comparar con los modelos anteriores
+En la regresión lineal múltiple, se emplea un modelo matemático en el que intervienen varias variables a la vez, creando un hiperplano. 
+
+En esta sección crearemos modelos de regresión lineal múltiple con la esperanza de mejorar el modelo lineal simple anterior. 
+
+El primero que desarrollaremos intervienen únicamente las variables temperatura máxima y temperatura mínima, tal y como se propuso en la sección de hipótesis previas.
+
+```{r}
+lmmModel_maxMinTemp = lm(wizmir$Mean_temperature ~ wizmir$Max_temperature+wizmir$Min_temperature)
+rmse_lmm_maxMin = rmse(wizmir$Mean_temperature, lmmModel_maxMinTemp$fitted.values)
+summary_lmm_maxMin = summary(lmmModel_maxMinTemp)
+c(summary_lmm_maxMin$r.squared,summary_lmm_maxMin$adj.r.squared,rmse_lmm_maxMin)
+summary_lmm_maxMin
+
+comparisonDF = rbind(linealSimpleModels_comparisonDataFrame, c(summary_lmm_maxMin$r.squared,summary_lmm_maxMin$adj.r.squared,rmse_lmm_maxMin))
+
+```
+
+Viendo los valores de R^2 y R^2 ajustado de 0.99 así como la reducción a menos de la mitad del RMSE, creo que será muy díficil encontrar un modelo capaz de mejorar este. Aún así, siguiendo el enunciado de la actividad elaboramos un modelo de regresión lineal múltiple en donde intervienen de forma conjunta los regresores de los modelos de regresión lineal. 
+
+```{r}
+lmmModel_simpleSubSet = lm(wizmir$Mean_temperature ~ wizmir$Max_temperature+wizmir$Min_temperature+wizmir$Dewpoint+wizmir$Sea_level_pressure+wizmir$Visibility)
+summary_lmm_simpleSubset = summary(lmmModel_simpleSubSet)
+rmse_lmm_simpleSubset = rmse(wizmir$Mean_temperature, lmmModel_simpleSubSet$fitted.values)
+comparisonDF = rbind(comparisonDF, c(summary_lmm_simpleSubset$r.squared,summary_lmm_simpleSubset$adj.r.squared,rmse_lmm_simpleSubset))
+```
+
+La introducción de las tres variables del punto de rocío, la presión al nivel del mar y la visibilidad solamente mejora el modelo en una décima del parámetro de R^2 ajustado, por lo que ante la decisión de elegir este modelo u el otro preferiría el anterior por simplicidad.
+
+####Modelos de regresión lineal múltiple con interacciones.
+Ante los resultados del análisis de correlación tenemos que la temperatura mínima y máxima están muy correladas, por lo que vamos a crear un modelo de regresión lineal múltiple con una iteración entre ellas. 
+
+```{r}
+lmmInnt = lm(wizmir$Mean_temperature ~ wizmir$Max_temperature*wizmir$Min_temperature)
+summary_lmm_Innt = summary(lmmInnt)
+rmse_lmm_Innt = rmse(wizmir$Mean_temperature, lmmInnt$fitted.values)
+comparisonDF = rbind(comparisonDF, c(summary_lmm_Innt$r.squared,summary_lmm_Innt$adj.r.squared,rmse_lmm_Innt))
+summary_lmm_Innt
+```
+
+Si observamos la tabla de las variables que intervienen en el modelo, podemos ver como la interacción entre las dos variables de temperatura no es significativo. 
+Además que los coeficientes de las dos temperaturas se acercan a la estimación de la hipótesis previa de que cada una de ellas intervienen en un 50%, cada una por la definición de media. 
+
+El siguiente modelo se tiene en cuenta que las variables de temperatura están correladas con el punto de rocío. 
+```{r}
+lmmInnt2 = lm(wizmir$Mean_temperature ~ wizmir$Max_temperature*wizmir$Min_temperature*wizmir$Dewpoint)
+summary_lmm_Innt2 = summary(lmmInnt2)
+rmse_lmm_Innt2 = rmse(wizmir$Mean_temperature, lmmInnt2$fitted.values)
+comparisonDF = rbind(comparisonDF, c(summary_lmm_Innt2$r.squared,summary_lmm_Innt2$adj.r.squared,rmse_lmm_Innt2))
+summary_lmm_Innt2
+```
+Como se muestra en el resumen, la variable de punto de rocío, no es significante en el modelo al igual que su interacción con la variable punto de rocío. Por su lado, la interacción entre las tres variables es menos significante que el resto de variables. 
+
+Viendo estos modelos con interacción, la afirmación anterior de que será difícil encontrar un modelo que mejore el modelo lineal múltiple en el que intervienen las dos temperaturas. 
+
+####Modelos no lineales. 
+
+Si rescatamos las representaciones de la temepratura media con respecto al punto de rocío y a la presión a nivel del mar podemos dudar de que el modelo que sigue es un modelo lineal o un modelo de orden dos. Por ello vamos a probar modelos en los que se le añaden estas dos variables al modelo lineal múltiple de las dos variables de temperatura. 
+
+```{r}
+lmmNL = lm(wizmir$Mean_temperature ~ wizmir$Max_temperature+wizmir$Min_temperature+poly(wizmir$Dewpoint,2))
+summary_lmm_NL = summary(lmmNL)
+rmse_lmm_NL = rmse(wizmir$Mean_temperature, lmmNL$fitted.values)
+comparisonDF = rbind(comparisonDF, c(summary_lmm_NL$r.squared,summary_lmm_NL$adj.r.squared,rmse_lmm_NL))
+summary_lmm_NL
+```
+Este modelo no supone ninguna diferencia con respecto a la modelo lineal múltiple con las dos temperaturas sin el punto de rocío. 
+
+```{r}
+lmmNL2 = lm(wizmir$Mean_temperature ~ wizmir$Max_temperature+wizmir$Min_temperature+poly(wizmir$Sea_level_pressure,2))
+summary_lmm_NL2 = summary(lmmNL2)
+rmse_lmm_NL2 = rmse(wizmir$Mean_temperature, lmmNL2$fitted.values)
+comparisonDF = rbind(comparisonDF, c(summary_lmm_NL2$r.squared,summary_lmm_NL2$adj.r.squared,rmse_lmm_NL2))
+summary_lmm_NL2
+```
+En este modelo todas las variables son significantes pero no supone ningún tipo de mejoría relevante si miramos el parámetro de la R^2 ajustada con respecto a los modelos anteriores. 
+
+```{r}
+row.names(comparisonDF) <-  c("MaxTemp", "MinTemp","DewPoint","SeaPressure","Visibility","ML_MinMax","ML_Subset","Innt_MinXMax", "Innt_XDewPoint","NL_DewPoint","NL_SeaPress")
+comparisonDF
+```
+
+Como se puede comprobar de la tabla anterior, el modelo lineal de la temperatura máxima es lo suficientemente bueno por si solo aunque tiene un 5% de fallo que corrige casi por completo al añadir al modelo la temperatura mínima. Siendo este modelo el más simple que representa el 99% de los casos. 
+
 ###Modelo Knn con Cross-validation de 5-particiones
 ###Comparación KNN con el modelo de regresión lineal múltiple
 ####Con el modelo obenido anteriormente
