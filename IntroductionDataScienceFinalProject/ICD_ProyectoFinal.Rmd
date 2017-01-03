@@ -508,9 +508,161 @@ comparisonDF
 Como se puede comprobar de la tabla anterior, el modelo lineal de la temperatura máxima es lo suficientemente bueno por si solo aunque tiene un 5% de fallo que corrige casi por completo al añadir al modelo la temperatura mínima. Siendo este modelo el más simple que representa el 99% de los casos. 
 
 ###Modelo Knn con Cross-validation de 5-particiones
-###Comparación KNN con el modelo de regresión lineal múltiple
-####Con el modelo obenido anteriormente
-####Con un modelo en el que intervengan todas la variables y que utilice las 5 particiones
+Otra técnica para elaborar un modelo de regresión es el modelo de los K vecinos más cercanos( _K nearest neighbours_ o _knn_), en esta técnica se utiliza la información de los k vecinos más cercanos para dar la salida a los datos de entrada. Este modelo tiende a ajustarse a los datos cuanto mayor sea el valor de k.
+
+Vamos a combinar esta técnica con la validación cruzada. Esta técnica consiste en dividir los datos de entrada en n particiones, en este caso serán 5, aplicar el algoritmo seleccionando una de las particiones como test y el resto como entrenamiento para la elaboración del modelo. Una vez tenga el modelo obtendrá la bondad con la partición de test y guardará esta bondad para volver a crear el modelo a partir de una nueva selección de particiones y una nueva partición de test, y así hasta que todas las particiones hayan sido la partición de test. Entonces se hará una media de todas las bondades calculadas y se hará la media. 
+
+Para la creación de un modelo del tipo Knn necesitamos de las librerías MASS y kknn de R por lo que las cargamos ahora con los comando require
+```{r}
+require("MASS")
+require("kknn")
+```
+
+Cargamos con el siguiente comando las particiones:
+```{r}
+nombre <- "./WizmirRegression/wizmir/wizmir"
+run_knn_fold <- function(i, x, tt = "test") {
+  file <- paste(x, "-5-", i, "tra.dat", sep="")
+  x_tra <- read.csv(file, comment.char="@")
+  file <- paste(x, "-5-", i, "tst.dat", sep="")
+  x_tst <- read.csv(file, comment.char="@")
+  In <- length(names(x_tra)) - 1
+  names(x_tra)[1:In] <- paste ("X", 1:In, sep="")
+  names(x_tra)[In+1] <- "Y"
+  names(x_tst)[1:In] <- paste ("X", 1:In, sep="")
+  names(x_tst)[In+1] <- "Y"
+  if (tt == "train") {
+    test <- x_tra
+  }
+  else {
+    test <- x_tst
+  }
+  fitMulti<- kknn(Y~.,x_tra,test)
+  yprime=fitMulti$fitted.values
+  sum(abs(test$Y-yprime)^2)/length(yprime) ##MSE
+}
+```
+
+Con los datos cargados obtenemos el error cuadrático de los modelos de kknn para la fase de entrenamiento y de testeo. 
+```{r}
+knnMSEtrain<-mean(sapply(1:5,run_knn_fold,nombre,"train"))
+knnMSEtest<-mean(sapply(1:5,run_knn_fold,nombre,"test"))
+knnMSEtrain
+knnMSEtest
+```
+La diferencia es de 4, por lo que se deduce que el modelo knn se ajusta demasiado a los datos en la fase de entrenamiento. 
+
+Si miramos estos errores con los obtenidos por los distintos modelos lineales anteriormente obtenidos 
+
+```{r}
+comparisonDF$rmse_lm_results
+```
+
+
+Vemos que el error de 2.53 podría aproximarse con el modelo de regresión lineal simple obtenido solamente con la variable temperatura máxima que tiene un 0.95 de valor en R^2, mientras que el error de 6.06 cae entre el error del modelo lineal simple de la temperatura mínima que tiene un valor de 0.91 de R^2 y el modelo lineal simple del punto de rocío que tiene 0.61 como valor para el R^2. Mientras que tiene mayor error que cualquiera de los modelos de regresión lineal multiple que ninguno llega al 1.4 de error y todos tienen un 0.99 de R^2 .
+
+
+No podemos comparar este algoritmo con el algoritmo de regresión lineal múltiple puesto que cada uno recibe una entrada distinta y se construye con un conjunto de variables 
+
+####Comparación entre algoritmos (KNN y LM)
+La verdad es que no se pueden comparar los dos algoritmos con los modelos que hemos creado hasta este punto puesto que ninguno tiene ni las mismas variables en el modelo ni los mismos ejemplos en la fase de entrenamiento y testeo. 
+Por ello vamos a desarrollar un nuevo modelo lineal simple que al igual que el modelo obtenido por knn tenga todas las variables para la construcción del mismo y los mismos ejemplos para cada fase, o lo que es lo mismo que intervenga la validación cruzada. 
+
+```{r}
+run_lm_fold <- function(i,x,tt = "test"){
+  file_n <- paste(x,"-5-",i, "tra.dat", sep = "")
+  x_tra <- read.csv(file_n, comment.char = "@", header = FALSE)
+  file <- paste(x,"-5-",i, "tst.dat", sep = "")
+  x_tst <- read.csv(file, comment.char = "@")
+  ln <- length(names(x_tra))-1
+  names(x_tra)[1:ln] <- paste ("X", 1:ln, sep="")
+  names(x_tra)[ln+1] <- "Y"
+  names(x_tst)[1:ln] <- paste ("X", 1:ln, sep="")
+  names(x_tst)[ln+1] <- "Y"
+  if (tt == "train") {
+    test <- x_tra
+  }
+  else {
+    test <- x_tst
+  }
+  fitMulti=lm(Y~.,x_tra)
+  yprime=predict(fitMulti,test)
+  sum(abs(test$Y-yprime)^2)/length(yprime) ##MSE
+}
+lmMSEtrain<-mean(sapply(1:5,run_lm_fold,nombre,"train"))
+lmMSEtest<-mean(sapply(1:5,run_lm_fold,nombre,"test"))
+
+lmMSEtrain
+lmMSEtest
+```
+
+Con estos nuevos valores de error si que podemos comparar los dos algoritmos a nivel de error cometido. Podemos ver claramente que el error de entrenamiento es menor para el modelo de regresión lineal tanto para el entrenamiento como para el testeo que el obtenido por el modelo de knn, y en ambos casos con valores parecidos a los que obtuvimos para los modelos sin la valoración cruzada. 
+
 ###Comparación de algoritmos
+
+Para hacer un test más fiable y cuantitativo que compare los algoritmos podemos realizar los test de Wilconxon,Friedman y Holm.
+
+####Wilconxon
+ El test de Wilconxon es un test no paramétrico con el que se comprueba que dos conjuntos de muestras son iguales y cuya hipótesis nula es que ambas muestras pertenecen a una misma distribución continua y simétrica respecto a una mediana que es igual a 0.
+ 
+ Esta distribución se construye con la diferencia entre las dos muestras, las muestras son los errores cometidos en cada una de las particiones de la validación cruzada, tanto para la fase de entrenamiento como para la de test.
+ 
+```{r}
+collection_mse_train_lm = sapply(1:5,run_lm_fold,nombre,"train")
+collection_mse_test_lm = sapply(1:5,run_lm_fold,nombre,"test")
+collection_mse_train_knn = sapply(1:5,run_knn_fold,nombre,"train")
+collection_mse_test_knn = sapply(1:5,run_knn_fold,nombre,"test")
+
+collection_mse_lm = cbind(collection_mse_train_lm,collection_mse_test_lm)
+collection_mse_knn = cbind(collection_mse_train_knn,collection_mse_test_knn)
+
+differences =  collection_mse_lm - collection_mse_knn
+wilconxon_diff =  cbind(
+        ifelse(differences < 0, abs(differences)+0.1,0.1),
+        ifelse(differences > 0, abs(differences)+0.1,0.1)
+)
+
+w1 = wilcox.test(collection_mse_lm,collection_mse_knn, alternative = "two.sided",paired = TRUE)
+w2 = wilcox.test(collection_mse_knn,collection_mse_lm,alternative = "two.sided",paired = TRUE)
+
+Rplus = w1$statistic
+Rminus = w2$statistic
+p_value = w1$p.value
+
+c(Rplus, Rminus,p_value)
+```
+Puesto que el p-value es menor que 0.05, rechazamos la hipótesis nula de que ambos errores siguen la misma distribución, y, por tanto, de que los algoritmos sean igual de buenos. 
+
 ####Friedman
+
+Podemos comparar tres muestras distintas, o lo que es lo mismo, la salida de tres algoritmos distintos si usamos el test de Friedman. El algoritmo que vamos a añadir a la lista es el modelo lineal de cinco regresores. Para poder compararlo usaremos también la validación cruzada sobre él.
+
+```{r}
+run_lmm_fold <- function(i,x,tt = "test"){
+  file_n <- paste(x,"-5-",i, "tra.dat", sep = "")
+  x_tra <- read.csv(file_n, comment.char = "@", header = FALSE)
+  file <- paste(x,"-5-",i, "tst.dat", sep = "")
+  x_tst <- read.csv(file, comment.char = "@")
+  ln <- length(names(x_tra))-1
+  names(x_tra)[1:ln] <- paste ("X", 1:ln, sep="")
+  names(x_tra)[ln+1] <- "Y"
+  names(x_tst)[1:ln] <- paste ("X", 1:ln, sep="")
+  names(x_tst)[ln+1] <- "Y"
+  if (tt == "train") {
+    test <- x_tra
+  }
+  else {
+    test <- x_tst
+  }
+  attach(x_tra)
+  fitMulti=lm(Y~X1+X2+X3+X5+X7,x_tra)
+  yprime=predict(fitMulti,test)
+  sum(abs(test$Y-yprime)^2)/length(yprime) ##MSE
+}
+
+collection_mse_train_lmm = sapply(1:5,run_lmm_fold,nombre,"train")
+collection_mse_test_lmm = sapply(1:5,run_lmm_fold,nombre,"test")
+collection_mse_lmm = cbind(collection_mse_train_lmm,collection_mse_test_lmm)
+```
+
 ####Holms
