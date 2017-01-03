@@ -679,11 +679,12 @@ pairwise.wilcox.test(data, groups, p.adjust= "holm", paired = TRUE)
 
 Existen diferencias significativas entre cualquier par de algoritmos al 95% de confianza.
 
-```{r,echo=FALSE}
-file_r = read.csv("./WizmirRegression/wizmir/regr_train_alumnos.csv",comment.char = "@")
-file_r[18,] = c(lmMSEtrain,knnMSEtrain,lmMSEtrain)
-write.csv(file_r,"./WizmirRegression/wizmir/regr_train_alumnos.csv")
-file_r = read.csv("./WizmirRegression/wizmir/regr_test_alumnos.csv",comment.char = "@")
-file_r[18,] = c(lmMSEtest,knnMSEtest,lmMSEtest)
-write.csv(file_r,"./WizmirRegression/wizmir/regr_test_alumnos.csv")
-```
+
+##Conclusión a la regresión
+
+Una vez vistos todos los algoritmos y sus posibilidades, si tuviera que elegir un modelo entre todos los generados escogería el modelo de regresión lineal múltiple en el que intervienen únicamente la temperatura mínima y la máxima, por la simplicidad del modelo y porque su valor de R^2 es del 0.99.
+
+\newpage
+#Clasificación
+
+El problema de clasificación que se intentará resolver en esta sección es el de la aprovación de crédito en Australia. El inconveniente que tiene este conjunto de datos es que ninguna de las variables que se proporcionan tiene un nombre descriptivo solamente contamos con el rango de valores de cada una de ellas. 
