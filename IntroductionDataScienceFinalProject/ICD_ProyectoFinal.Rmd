@@ -679,3 +679,11 @@ pairwise.wilcox.test(data, groups, p.adjust= "holm", paired = TRUE)
 
 Existen diferencias significativas entre cualquier par de algoritmos al 95% de confianza.
 
+```{r,echo=FALSE}
+file_r = read.csv("./WizmirRegression/wizmir/regr_train_alumnos.csv",comment.char = "@")
+file_r[18,] = c(lmMSEtrain,knnMSEtrain,lmMSEtrain)
+write.csv(file_r,"./WizmirRegression/wizmir/regr_train_alumnos.csv")
+file_r = read.csv("./WizmirRegression/wizmir/regr_test_alumnos.csv",comment.char = "@")
+file_r[18,] = c(lmMSEtest,knnMSEtest,lmMSEtest)
+write.csv(file_r,"./WizmirRegression/wizmir/regr_test_alumnos.csv")
+```
