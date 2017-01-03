@@ -613,8 +613,8 @@ collection_mse_test_lm = sapply(1:5,run_lm_fold,nombre,"test")
 collection_mse_train_knn = sapply(1:5,run_knn_fold,nombre,"train")
 collection_mse_test_knn = sapply(1:5,run_knn_fold,nombre,"test")
 
-collection_mse_lm = cbind(collection_mse_train_lm,collection_mse_test_lm)
-collection_mse_knn = cbind(collection_mse_train_knn,collection_mse_test_knn)
+collection_mse_lm = c(collection_mse_train_lm,collection_mse_test_lm)
+collection_mse_knn = c(collection_mse_train_knn,collection_mse_test_knn)
 
 differences =  collection_mse_lm - collection_mse_knn
 wilconxon_diff =  cbind(
@@ -662,7 +662,20 @@ run_lmm_fold <- function(i,x,tt = "test"){
 
 collection_mse_train_lmm = sapply(1:5,run_lmm_fold,nombre,"train")
 collection_mse_test_lmm = sapply(1:5,run_lmm_fold,nombre,"test")
-collection_mse_lmm = cbind(collection_mse_train_lmm,collection_mse_test_lmm)
+collection_mse_lmm = c(collection_mse_train_lmm,collection_mse_test_lmm)
+
+data = as.matrix(cbind(collection_mse_lm,collection_mse_knn,collection_mse_lmm))
+friedman.test(data)
 ```
+Dado que el valor del p-value es menor que 0.05, podemos decir que existe una diferencia significativa entre los tres conjuntos.
 
 ####Holms
+Ahora que sabemos que existen diferencias entre los algoritmos vamos a realizar el test de Holms para ver entre que pares de algoritmos existen las diferencias.
+
+```{r}
+groups <- rep(1:dim(data)[2], each=dim(data)[1])
+pairwise.wilcox.test(data, groups, p.adjust= "holm", paired = TRUE)
+```
+
+Existen diferencias significativas entre cualquier par de algoritmos al 95% de confianza.
+
