@@ -687,4 +687,112 @@ Una vez vistos todos los algoritmos y sus posibilidades, si tuviera que elegir u
 \newpage
 #Clasificación
 
-El problema de clasificación que se intentará resolver en esta sección es el de la aprovación de crédito en Australia. El inconveniente que tiene este conjunto de datos es que ninguna de las variables que se proporcionan tiene un nombre descriptivo solamente contamos con el rango de valores de cada una de ellas. 
+El problema de clasificación que se intentará resolver en esta sección es el de la aprovación de crédito en Australia. El inconveniente que tiene este conjunto de datos es que ninguna de las variables que se proporcionan tiene un nombre descriptivo solamente contamos con el rango de valores de cada una de ellas, como ya se vió en la sección de análisis de datos. 
+
+Para realizar la clasificación se probarán tres algoritmos: los K-vecinos más cercanos, LDA y QDA, todos ellos implementados en el paquete _caret_. 
+
+```{r}
+require("caret")
+```
+
+En este apartado recuperamos los datasets que habíamos desarrollado para la fase de análisis de datos:
+```{r}
+australian <- read.csv("./AustralianClassification/australian/australian.dat", comment.char = "@", header = FALSE)
+names(australian) <- c("A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11","A12","A13","A14","A15")
+
+```
+
+##Preparación de los datos para clasificación.
+
+En nuestro dataset las variables A1, A4, A8, A9, A11, A12 son variables categóricas, al igual que la variable de salida, la variable 15. Por defecto estas variables se leen como números, al tener estas variables en su gran mayoría solamente dos clases anotadas como 0 y 1 podemos usar este contraste en nuestro beneficio a la hora de hacer el modelo para clasificación, pero en aquellas variables que tienen tres clases, como es el caso de las variables A4 y A12, tenemos que utilizar otro método para darle contraste a cada clase. En este caso utilzaremos la técnica de códificación "dummy".
+
+La codificación dummy transforma cada nivel en un número binario compuesto por un único '1' en una posición diferente para cada nivel. Para conseguir dicha codificación añadimos el parámetro constrast a cada una de las variables con tres categorías, para poder ejecutar el contraste primero convertimos la variable en factor. 
+
+
+```{r}
+australian[,4] = as.factor(australian[,4])
+australian[,12] = as.factor(australian[,12])
+australian[, 15]  = as.factor(australian[,15]) #Variable de salida
+contrasts(australian$A4) = contr.treatment(3)
+contrasts(australian$A12) = contr.treatment(3)
+```
+
+
+La generación de los modelos de clasificación usando cada algoritmo la haremos dividiendo en conjunto de datos en dos partes: entrenamiento y testeo. En este caso será una división del 60% para entrenamiento y 40% para testeo. De esta forma los primeros 414 registros de la base de datos serán de entrenamiento y los restantes de testeo. 
+
+```{r}
+training_australian = australian[1:414,-15]
+training_labels_australian = australian[1:414,15]
+
+
+test_australian = australian[414:690,-15]
+test_labels_australian = australian[414:690,15]
+```
+
+##Los k vecinos más cercanos. 
+
+La técnica de los K-vecinos más cercanos (KNN de su traducción al inglés) es una técnica considerada _lazy algoritm_ o algoritmo gandul, por el hecho de que no realiza ningún cálculo especial durante la fase de entrenamiento sino que se dedica a almacenar los datos y en la fase de predicción realiza todo el trabajo. El procedimiento que realiza la técnica de los k-vecinos más cercanos es el cálculo de la distancia del punto a clasificar con todos los puntos existentes en la base de datos hasta el momento, seleccionando los k más cercanos y decidiendo según sus datos que valor se le da a la etiqueta de clasificación. 
+
+Los datos tienen que ser normalizados antes de utilizarlos en el algoritmo ya que muchos de ellos tienen un rango muy amplio y otros más reducido. Para ello utilizaremos el parámetro de la función de knn "scale" que nos permitirá de forma sencilla normalizar los datos y ejecutar el algoritmo en una única línea de código.
+Otra precaución que hay que tomar con los datos de las etiquetas es que tienen que ser tratados como factores para que caret sea capaz de determinar que el algoritmo es para clasificación y no para regresión, pero de eso ya nos hemos encargado en el apartado anterior de preparación de datos. 
+
+```{r}
+knnModel = train(x = training_australian, y = training_labels_australian, method = "knn", preProc = c("center","scale"), metric="Accuracy", tuneGrid = data.frame(.k=1:15))
+knnModel
+
+```
+
+En la generación del modelo Knn hemos determinado que busque el mejor número de vecinos, k, para el modelo entre 1 y 15 y ha dicho que el mejor modelo lo ha obtenido con 15 vecinos más cercanos. 
+Como vemos el primer modelo ya da una presición del 81% y el mejor modelo tiene una presición del 85%, esta pequeña mejora a pesar de haber aumentado el número de vecinos que intervienen en el valor, causa sospechas de que se está sobreajustando a los datos y que nos va a dar problemas a la hora de generalizar. Para comprobarlo vamos a realizar una clasificación con este modelo y vamos a obtener su presición:
+
+```{r}
+knnPredict = predict(knnModel,test_australian)
+cm_knn = confusionMatrix(knnPredict, test_labels_australian)
+(cm_knn$table[1,1] + cm_knn$table[2,2])/sum(cm_knn$table)
+```
+
+La presición obtenida no varía significativamente con respecto de la obtenida en la fase de entrenamiento, por lo que podemos dar el modelo por bueno.
+
+##Linear Discriminat Analysis (LDA)
+
+La técnica de la discriminación linear separa los datos asumiendo que cada clase pertenece a una distribución de probabilidad distinta. Además asume que cada una de las variables de entrada sigue una distribución normal, hecho que se probó en la fase de análisis que no ocurría con ninguna de las variables y por ello no se espera que ni este ni el algoritmo QDA funcionen bien. No solo espera la normalidad sino que las varianzas son iguales o muy similares entre los conjuntos de salida.
+
+Usando el mismo conjunto de entrenamiento que antes vamos a elaborar un nuevo modelo basado en el algoritmo LDA que se encuentra en la librería MASS que hemos cargado anteriormente para la parte de regresión:
+
+```{r}
+ttraining = cbind(training_australian[,-4],training_labels_australian)
+ldaModel  =  lda(ttraining$training_labels_australian ~ ., data = ttraining)
+ldaPrediction = predict(ldaModel,test_australian)
+lda_confusionTable <- table(ldaPrediction$class,test_labels_australian)
+lda_accuracy <- (lda_confusionTable[1,1]+lda_confusionTable[2,2])/sum(lda_confusionTable)
+lda_accuracy
+```
+
+La eliminación de la variable A4 tiene como razón que no se conseguia determinar un error en fases posteriores por lo que se eliminó y se prosiguió en la construcción del modelo. 
+Tras construir el modelo se utilizó éste para predecir los valores de train que teníamos separados desde antes y realizamos una tabla de confusión de la que extraemos los verdaderos positivos y los verdaderos negativos para sumarlos y compararlos con el total del conjunto, de esta forma tenemos la medida de presición, que en este caso no es tan mala como me esperaba e, incluso llega a ser mejor que el modelo KNN que obtuvimos antes. 
+
+##Quadratic Discriminant Analysis
+
+Como se comentó antes, LDA asume que las varianzas de las distribuciones de salida son la misma pero QDA no. QDA estima una varianza/covarianza para cada una de las clases de salida.
+
+```{r}
+
+qdaModel  =  qda(ttraining$training_labels_australian ~ ., data = ttraining)
+qdaPrediction = predict(qdaModel,test_australian)
+qda_confusionTable <- table(qdaPrediction$class,test_labels_australian)
+qda_accuracy <- (qda_confusionTable[1,1]+qda_confusionTable[2,2])/sum(qda_confusionTable)
+qda_accuracy
+```
+
+
+##Comparación de los tres algoritmos
+
+
+
+```{r}
+classificationPredictions = as.matrix(cbind(knnPredict,ldaPrediction$class,qdaPrediction$class))
+friedman.test(classificationPredictions)
+
+groups2 <- rep(1:dim(classificationPredictions)[2], each=dim(classificationPredictions)[1])
+pairwise.wilcox.test(classificationPredictions, groups2, p.adjust= "holm", paired = TRUE)
+```
