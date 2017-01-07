@@ -715,6 +715,7 @@ australian[,12] = as.factor(australian[,12])
 australian[, 15]  = as.factor(australian[,15]) #Variable de salida
 contrasts(australian$A4) = contr.treatment(3)
 contrasts(australian$A12) = contr.treatment(3)
+output_australian = australian[,15]
 ```
 
 
@@ -781,26 +782,85 @@ Dicho error no varía significativamente de una fase a otra, ni tampoco con el a
 
 ##Quadratic Discriminant Analysis
 
-Como se comentó antes, LDA asume que las varianzas de las distribuciones de salida son la misma pero QDA no. QDA estima una varianza/covarianza para cada una de las clases de salida.
+Como se comentó antes, LDA asume que las varianzas de las distribuciones de salida son la misma pero QDA no. QDA estima una varianza/covarianza para cada una de las clases de salida. 
 
 ```{r}
 
-#qdaModel  =  qda(ttraining$training_labels_australian ~ ., data = ttraining)
-#qdaPrediction = predict(qdaModel,test_australian)
-#qda_confusionTable <- table(qdaPrediction$class,test_labels_australian)
-#qda_accuracy <- (qda_confusionTable[1,1]+qda_confusionTable[2,2])/sum(qda_confusionTable)
-#qda_accuracy
+qdaModel  = train(x = training_australian[,c(-4,-12)], y = training_labels_australian, method = "qda", preProc = c("center","scale"), metric="Accuracy")
+qdaModel
+qdaPrediction = predict(qdaModel,test_australian[,c(-4,-12)])
+
+cm_qda = confusionMatrix(qdaPrediction, test_labels_australian)
+(cm_qda$table[1,1] + cm_qda$table[2,2])/sum(cm_qda$table)
 ```
 
+El método QDA se ha presentado como el método con el peor resultado de presición de los tres métodos explorados, con un 82% de presición para la etapa de entrenamiento y con un 79% en la fase de test. Esto será debido a que las varianzas de los conjuntos de salida son muy similares y al presuponer QDA que son distintas entra en error. 
 
 ##Comparación de los tres algoritmos
 
-
+A la hora de comparar los tres algoritmos vamos a cambiar el método de elaboración de los modelos para introducirles la validación cruzada. De esta forma podremos comparar sabiendo que los tres métodos han probado todas las combinaciones de particiones para generar el modelo en la fase de entrenamiento. Para hacer la validación cruzada tomaremos la función que hemos usado en el apartado de regresión y le haremos unos ajustes para que nos s
 
 ```{r}
-#classificationPredictions = as.matrix(cbind(knnPredict,ldaPrediction$class,qdaPrediction$class))
-#friedman.test(classificationPredictions)
+nombre <- "australian"
+runFold <- function(i,x,tt = "test",method){
+  file_n <- paste(x,"-10-",i, "tra.dat", sep = "")
+  file_n
+  x_tra <- read.csv(file_n, comment.char = "@", header = FALSE)
+  file <- paste(x,"-10-",i, "tst.dat", sep = "")
+  x_tst <- read.csv(file, comment.char = "@")
+  ln <- length(names(x_tra))-1
+  names(x_tra)[1:ln] <- paste ("X", 1:ln, sep="")
+  names(x_tra)[ln+1] <- "Y"
+  names(x_tst)[1:ln] <- paste ("X", 1:ln, sep="")
+  names(x_tst)[ln+1] <- "Y"
+  
+  x_tra[,ln+1] = as.factor( x_tra[,ln+1])
+  x_tst[,ln+1] = as.factor( x_tst[,ln+1])
+  if (tt == "train") {
+    test <- x_tra
+  }
+  else {
+    test <- x_tst
+  }
+  attach(x_tra)
+  if(method == "knn"){
+    model = train(x = x_tra[,c(-4,-12,-15)], y = as.factor(Y),method ="knn",preProc = c("center","scale"))
+  }
+  else if(method == "lda"){
+    model = train(x = x_tra[,c(-4,-12,-15)], y = as.factor(Y),method ="lda",preProc = c("center","scale"))
+  }
+  else if (method == "qda"){
+    model = train(x = x_tra[,c(-4,-12,-15)], y = as.factor(Y),method ="qda",preProc = c("center","scale"))
+  }
+    
+  prediction = predict(model,test[,c(-4,-12,-15)])
+  cm = confusionMatrix(prediction,test[,15])
+  (cm$table[1,1]+ cm$table[2,2])/sum(cm$table)
+}
 
-#groups2 <- rep(1:dim(classificationPredictions)[2], each=dim(classificationPredictions)[1])
-#pairwise.wilcox.test(classificationPredictions, groups2, p.adjust= "holm", paired = TRUE)
+knnPredict = sapply(1:10,runFold,nombre,"train","knn")
+ldaPrediction = sapply(1:10,runFold,nombre,"train","lda")
+qdaPrediction = sapply(1:10,runFold,nombre,"train","qda")
 ```
+
+
+En este punto tenemos en _knnPredict_, _ldaPredict_ y _qdaPredict_ los valores de las presiciones para cada una de las particiones de la base de datos. Con estos nuevos datos podemos realizar la comparación de los algoritmos. Dado que el número de algoritmos que vamos a comparar es tres, vamos a realizar únicamente las pruebas de Friedman y Holms para saber si existe alguna diferencia.
+
+```{r}
+classificationPredictions = as.matrix(cbind(knnPredict,ldaPrediction,qdaPrediction))
+friedman.test(classificationPredictions)
+
+```
+Dado que el p-values es menor que 0.05 podemos determinar que existen diferencias entre los algoritmos, es decir, al menos uno de ellos es diferente de los demás. Para averiguarlo realizamos el test de Holms. 
+
+```{r}
+groups2 <- rep(1:dim(classificationPredictions)[2], each=dim(classificationPredictions)[1])
+pairwise.wilcox.test(classificationPredictions, groups2, p.adjust= "holm", paired = TRUE)
+```
+
+Podemos ver en el cuadrante anterior que para el test de Holm el modelo KNN y el modelo de LDA son iguales con el 95,9% de confianza, mientras que en el caso de QDA con KNN y QDA con LDA no hay un p-value lo suficientemente significativo para decir que son iguales.  
+
+##Conclusión
+
+Ante los modelos de los tres algoritmos no podemos decir que exista diferencia entre el modelo de KNN y LDA a nivel de presición de la clasificación, pero como ya se comentó en su momento, el método KNN es un algoritmo que no construye el modelo en la fase de entrenamiento, sino que en la fase de test realiza todos los cálculos lo que implica que es lento para dar una respuesta ante una entrada concreta.
+Por esto me inclino a decir que para este problema concreto el mejor modelo es el de LDA. 
