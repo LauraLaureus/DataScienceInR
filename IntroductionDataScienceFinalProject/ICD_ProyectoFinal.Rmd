@@ -1,8 +1,9 @@
 ---
-title: "ICD_ProyectoFinal"
+title: "Proyecto final de Introducción a Ciencia de Datos"
 author: "Laura del Pino Díaz"
-date: "15/12/2016"
-output: 
+date: "15/12/2016 - 08/01/2017"
+header-includes: \usepackage[spanish]{babel}
+output:
   pdf_document:
     toc: true
     toc_depth: 5
@@ -17,16 +18,16 @@ knitr::opts_chunk$set(comment = "", warning = FALSE, message = FALSE, echo = TRU
 \newpage
 #Introducción
 
-En este proyecto vamos a realizar un análisis de dos bases de datos: la base de datos de la aprobación  de créditos en australia (australian credit approval) y el tiempo atmosférico de la ciudad de Izmir (wizmir).
- A partir de este análisis de los datos se realizará un estudios de modelos de clasificación con la base de datos de la aprobación de los créditos para determinar si se le pueden conceder o no el crédito. Mientras que con la base de datos del tiempo se elaaborarán distintos modelos de regresión con el objetivo de predecir la temperatura media.
+En este proyecto vamos a realizar un análisis de dos bases de datos: la base de datos de la aprobación  de créditos en australia ( _australian credit approval_ ) y el tiempo atmosférico de la ciudad de Izmir(Turquía) ( _wizmir_ ).
+ A partir de este análisis de los datos se realizará un estudio de los modelos de clasificación con la base de datos de la aprobación de los créditos para determinar si se le pueden conceder o no el crédito. Mientras que con la base de datos del tiempo se elaborarán distintos modelos de regresión con el objetivo de predecir la temperatura media.
  
-#Las bases de datos
+#Análisis de datos
 
-En este apartado estudiaremos las bases de datos _Australian Credit Approval(abreviado australian)_ para el problema de clasificación y _Weather of Izmir(abreviado wizmir)_ para el problema de regresión. 
+En este apartado estudiaremos la estructura de los datos contenidos en las bases de datos _Australian Credit Approval(abreviado australian)_ para el problema de clasificación y _Weather of Izmir(abreviado wizmir)_ para el problema de regresión. 
 
 ##Australian (Australian Credit Approval)
 
-La base de datos _australian credit approval_ tiene 15 atributos de los cuales actúan como predictores 14. 
+La base de datos _australian credit approval_ tiene 15 atributos de los cuales actúan como predictores los primeros 14. 
 
 Los atributos de esta base de datos en particular no tienen un nombre descriptivo que te permita conocer que es lo que representan los datos por razones de confidencialidad, tal y como se detalla en la página de [UCI](http://archive.ics.uci.edu/ml/datasets/Statlog+%28Australian+Credit+Approval%29). Lo que si conocemos es el número de observaciones, 690, y los diferentes tipos de variables que componen la base de datos y el intervalo o valores que puede tomar cada variable y se enlistan a continuación. 
 
@@ -47,7 +48,7 @@ Los atributos de esta base de datos en particular no tienen un nombre descriptiv
 * Class nominal {0,1}
 
 
-  Dado la no descriptividad de los nombres no podemos realizar hipótesis previas sobre la base de datos. Por lo que procedemos a realizar un estudio de los principales estadísticos de cada variables. Este estudio lo haremos en dos partes: una parte dedicada a las variables numéricas y otra parte dedicada a las variables categóricas. 
+  Dado la nula descriptividad de los nombres no podemos realizar hipótesis previas sobre la base de datos. Por lo que procedemos a realizar un estudio de los principales estadísticos de cada variables. Este estudio lo dividiremos en dos partes: una parte dedicada a las variables numéricas y otra parte dedicada a las variables categóricas. 
   
 ```{r}
 australian <- read.csv("./AustralianClassification/australian/australian.dat", comment.char = "@", header = FALSE)
@@ -63,8 +64,8 @@ output_australian <- australian[,15]
 
 ###Estudio de las variables numéricas
 
-Son varios los parámetros que que nos permiten conocer con más detalle la base de datos aunque no se tenga un nombre descriptivo para cada una de las variables, ejemplo de esto es el número de valores perdidos, la media,mediana, moda y cuartiles.
-Así mismo se hace necesario comprobar algunas asumciones que hacen determinados algoritmos que emplearemos en este problema de clasificación, como son los test de normalidad del conjunto de datos (para el algoritmo LDA y QDA) y la igualdad de las varianzas (para el algoritmo LDA).
+Son varios los parámetros que que nos permiten conocer con más detalle la base de datos aunque no se tenga un nombre descriptivo para cada una de ellas, ejemplo de esto es el número de valores perdidos, la media,mediana, moda y cuartiles.
+Así mismo se hace necesario comprobar algunos de los supuestos que realizan los algoritmos LDA y QDA que emplearemos en este problema de clasificación, como son los test de normalidad del conjunto de datos de entrada y la igualdad de las varianzas.
 
 ####Estudio del número de valores perdidos
 En la página web de la base de datos de _Australian Credit Approval_ se indica que la base de datos tiene valores perdidos, en esta sección vamos a comprobar qué variables tienen esos valores perdidos. 
@@ -86,9 +87,21 @@ numerical_stats <- rbind(numerical_stats, numerical_std)
 numerical_stats
 ```
 
- Como podemos ver las variables con mayor varianza son la variable A2,A3,A7 y A14 debido a que los rangos que puede tomar dicha variable son mayores. 
+Como podemos ver las variables con mayor varianza son la variable A2,A3,A7 y A14 debido a que los rangos que puede tomar dicha variable son mayores. 
  
- Algunos algoritmos como LDA y QDA realizan suposiciones sobre las variables que reciben a la entrada. En el caso LDA supone que los conjuntos que discriminan tienen la misma varianza y son poblaciones normalmente distribuidas. 
+Si queremos comparar las varianzas de cada grupo de la salida, pensando comprobar el supuesto de que las covarianzas de los grupos son iguales para el algoritmo LDA podemos usar un test de Levene dentro del paquete _car_. En este caso, lo que hemos hecho es una función que comprueba el valor del p-value del test de Levene de cada variable y nos devuelve si la hipótesis nula de que las varianzas son iguales para las categorías de  la salida es aceptada o no.
+
+```{r}
+require(car)
+leveneTestForNumerical = function (column){
+  l = leveneTest(numerical_australian[,column],output_australian)
+  ifelse(l$`Pr(>F)` > 0.05, "Nula aceptada","Nula rechazada")
+}
+results_Levene = sapply(1:(dim(numerical_australian)[2]),leveneTestForNumerical)
+results_Levene[1,]
+```
+
+La hipótesis de igualdad de varianzas solo se acepta para las variables A3, A5 y A10, por lo que un modelo LDA con estas variables puede dar un buen resultado. 
 
 ####Test de normalidad
 
@@ -98,13 +111,15 @@ kruskal.test(numerical_australian)
 ```
 
  Puesto que el p-value es menor que 0.05 rechazamos la hipótesis de que todas las variables siguen la misma distribución. 
- Necesitamos encontrar aquellas variables que sí que sigan una distribución normal, para ello someteremos a todas al test de Shapiro-Wilk.
+ Necesitamos encontrar aquellas variables que sí que sigan una distribución normal, para ello someteremos a todas al test de Shapiro-Wilk.Este test mantiene como hipótesis nula que la muestra que tiene como entrada viene de una distribución normal, en caso de que el p-value obtenido sea menor que 0.05 se rechaza la hipótesis nula. 
+ 
 ```{r}
 numerical_australian_shapiro <- apply(numerical_australian,2,shapiro.test)
 numerical_australian_shapiro
 ```
 
-  Dado que todos los p-value de todas las variables es menor que 0.05 deducimos que ninguna de las varibales sigue una distribución normal por lo que no se espera que ni el algoritmo LDA ni el algoritmo QDA funcionen bien para la clasificación. 
+  Dado que todos los p-value de todas las variables es menor que 0.05 deducimos que ninguna de las variables sigue una distribución normal por lo que no se espera que ni el algoritmo LDA ni el algoritmo QDA funcionen bien para la clasificación. 
+  
 \newpage
  A continuación se muestran los gráficos de barras de todas las variables numéricas:
   
@@ -143,12 +158,12 @@ plot(australian[,13],australian[,15], main = "Comparación A13 con la salida", p
 plot(australian[,14],australian[,15], main = "Comparación A15 con la salida", pch = 16,xlab = "Variable A14",ylab = "Variable 15")
 ```
 
-  No podemos decir que ninguna de las variables numéricas sea realmente discriminante para la salida. Sin embargo, no descartaría la variable 14 para que intervenga un modelo de clasificación, porque para valores altos solamente da salida positiva para la clase 1.
+  No podemos decir que ninguna de las variables numéricas sea realmente discriminante para la salida. Sin embargo, no descartaría la variable 14 para que intervenga un modelo de clasificación, porque para valores altos solamente da salida positiva para la clase 1, lo que puede servir para clasificar en estos casos. 
 
 ####Estudio de las correlaciones
   Volvermos a representar las variables ahora dejando la variable de salida fuera
 ```{r}
-pairs(australian[,c(-1,-4,-8,-9,-11,-12,-15)], main = "Comparación de las variables numéricas entre ellas",col=ifelse(australian[,15]== 1,"red","blue"), pch = 16)
+pairs(numerical_australian, main = "Comparación de las variables numéricas entre ellas",col=ifelse(australian[,15]== 1,"red","blue"), pch = 16)
 ```
 
    Aparentemente no hay relación entre las variables, lo que parece curioso es que cualquiera de las variables que interacciona con la variable 6 forma una nube de puntos que recuerda a un histograma. 
@@ -164,7 +179,7 @@ pairs(australian[,c(-1,-4,-8,-9,-11,-12,-15)], main = "Comparación de las varia
 ###Estudio de las variables categóricas. 
 
   Las variables catergóricas merecen un estudio propio puesto que estadísticos como la media o la desviación típica no tienen un valor interesante ya que no tiene sentido si tenemos las clases 1,2,3 y que la clase media sea 2,2. Por ello los estadísticos que vamos a usar en esta sección son los cuartiles y  el valor más frecuente o moda. 
-  Pero antes que nada vamos a estudiar si el conjunto de los datos categóricos continen valores pedidos
+  Pero antes que nada vamos a estudiar si el conjunto de los datos categóricos continen valores pedidos.
 
 ####Estudio de los valores perdidos
 
@@ -199,6 +214,8 @@ categorical_stats <- rbind(categorical_stats, apply(australian[,c(1,4,8,9,11,12)
 categorical_stats
 ```
 
+Las variables 4 y 12 son las únicas variables que tienen más de dos categorías por lo que cobra más importancia los cuartiles. De hecho en estas variables son las que la categoría 2 aparece tanto en el primer cuartil como en el 3 lo que implica que al menos el 50% de las observaciones son de esta categoría, conviertiéndose así en el valor más frecuente,es decir en la moda.
+En el resto de casos la moda podría haber sido sustituida perfectamente por la mediana, puesto que solo tienen dos categorías aquel que obtenga el puesto que deje la mitad de las observaciones ordenadas por debajo suya es el más frecuente. 
 
 La información anterior nos ilustra como se distribuye cada una de las variables pero no como se relacionan con la salida, para ello dibujaremos gráficos en donde comparamos la frecuencia de cada valor con respecto al valor que toma la salida. 
   
@@ -235,7 +252,14 @@ legend("topright",legend = c("A12 cuando la salida es 0", "A12 cuando la salida 
 
 Viendo las gráficas anteriores, vemos que la gran mayoría de las variables no discriminan bien la salida, pero las variables A8 y A9 si que discriminan bien la mayoría de los casos. 
 
-De este estudio solo podemos concluir que pueden actuar como buenos discriminantes las variables categóricas A8 y A9 así como la variable A14. A primera vista no esperaría buenos resultados de ningún modelo, excepto del KNN que al ajustarse mejor a los datos puede ser más flexible.
+
+###Conclusiones del estudio de Australian
+
+Tras este estudio podemos concluir que:
+* Pueden actuar como buenos discriminantes las variables categóricas A8 y A9 así como la variable A14. 
+* A primera vista no esperaría buenos resultados de ningún modelo, excepto aquellos que generados por el algoritmo de los K vecinos más cercanos (Knn) que al ajustarse mejor a los datos puede ser más flexible.
+* Los modelos generados mediante la técnica de LDA que cuenten con las variables A3,A5 y A10 pueden dar buenos resultados, debido a que cumplen uno de los dos requisitos que se piden: las varianzas de los conjuntos de la salida son iguales. 
+
 
 \newpage
 ##Wizmir (Weather of Izmir)
@@ -265,10 +289,11 @@ Las hipótesis previas nos permite son una primera aproximación del modelo de d
 2. Por la ley física que relaciona la temperatura y la presión, a mayor presión mayor temperatura. No se espera que esta ley se cumpla por completo ya que está estipulada para gases de volumen constante, por esto tanto la presión como la presión a nivel del mar tienen que ver en cierta medida con la temperatura. 
 3. La velocidad del viento y la velocidad máxima del mismo, no intervienen o lo hacen en una medida despreciable, puesto que son factores que intervienen más en la sensación térmica que en la propia temperatura. 
 4. El rocío y las precipitaciones, tienen que ver más como consecuencia de la temperatura que como factor generador de la temperatura, no se descarta su intervención pero se espera que sea mínima. 
-5. Sobre la visibilidad, no sabemos que comportamiento tendrá puesto que en ocasiones hay poca visibilidad a causa de  bancos de niebla que se generan por las altas temperaturas, pero en ciertas zonas del planeta puede ser por polvo en suspensión traido por el viento, que genera que haya mayor temperatuda, por ello como actuará esta variable en el modelo es todo un misterio.
+5. Sobre la visibilidad, no sabemos que comportamiento tendrá puesto que en ocasiones hay poca visibilidad a causa de  bancos de niebla que se generan por las bajas temperaturas, pero en ciertas zonas del planeta puede ser por polvo en suspensión traido por el viento, que genera que haya mayor temperatuda, por ello como actuará esta variable en el modelo es todo un misterio.
 
-Ahora con estas hipótesis previas, procedemos a estudiar las variables, que en este caso son solo numéricas, con respecto de la salida. 
+Ahora con estas hipótesis previas, procedemos a estudiar las variables, que en este caso son todas numéricas, con respecto de la salida. 
 
+\newpage
 ###Variables numéricas.
 
 En primer lugar vamos a cargar el dataset.
@@ -289,11 +314,11 @@ Esta base de datos no tiene valores perdidos, lo que nos facilita el trabajo.
 
 ####Test de normalidad
 
- En este caso, el problema no es un problema de clasificación por lo que los algoritmos no hacen suposiciones de los datos de entrada como el caso anterior que necesitaba que los datos estuvieran normalmente distribuidos, por ello no vamos a realizar un estudio de la normalidad de los datos. 
+ En este caso, el problema no es un problema de clasificación por lo que los algoritmos no hacen suposiciones de los datos de entrada como el caso anterior que necesitaba que los datos estuvieran normalmente distribuidos ni que las varianzas de los conjuntos de salida fueran iguales,  por ello no vamos a realizar un estudio de la normalidad de los datos ni de igualdad de las varianzas. 
 
 ####Estudio de los principales estadísticos
 
- La obtención de los principales valores estadísticos la obtenemos, como hemos visto en los casos anteriores, mediante la función summary. 
+ La obtención de los principales valores estadísticos la obtenemos, como hemos visto en los casos anteriores, mediante la función _summary_. 
 
 ```{r}
 summary(wizmir)
@@ -309,14 +334,14 @@ wizmir_std
 
 Viendo las desviaciones típicas de la temperatura mínima y máxima tener un valor tan cercano al de la temperatura media, que es el valor que tenemos que obtener, hace pensar que podrían compartir distribución. 
 
-\newpage
+
 Si representamos el valor de todas las variables con respecto de la salida obtenemos los siguientes gráficos
 
 ```{r fig.align="center"}
 plot(wizmir, main =  "Relación de las variables entre ellas", pch = 16)
 ```
 
-Primero, nos vamos a concentrar en la última fila de la ilustración anterior, en ella están reflejadas todas las variables como variable de "entrada" o variable independiente y la variable de salida como variable independiente. En esta fila podemos ver que las variables de temperatura máxima y mínima tienen una relación lineal con la temperatura media, como era de esperar por la hipótesis 1, pero además esta tendencia lineal también la tiene la variable de rocío que puede ser debido a que el rocío es dependiente de la temperatura mínima,como se ve en la relación entre estas dos variables (y en la relación de la variable rocío con la temperatura máxima también) pero es un detalle a tener en cuenta a la hora de elaborar un modelo. 
+Primero, nos vamos a concentrar en la última fila de la ilustración anterior, en ella están reflejadas todas las variables de entrada en el eje horizontal y la variable de salida en el eje vertical. En esta fila podemos ver que las variables de temperatura máxima y mínima tienen una relación lineal con la temperatura media, como era de esperar por la hipótesis 1, pero además esta tendencia lineal también la tiene la variable de rocío que puede ser debido a que el rocío es dependiente de la temperatura mínima,como se ve en la relación entre estas dos variables (y en la relación de la variable rocío con la temperatura máxima también) pero es un detalle a tener en cuenta a la hora de elaborar un modelo. 
 
 Otras variables que podrían intervenir en el modelo de una forma, no tan claramente lineal o incluso de orden superior, son la presión a nivel del mar y la velocidad máxima del viento, puesto que dentro de la nube de puntos se puede dibujar una recta decreciente e incluso una curva.
 
@@ -330,23 +355,30 @@ cor(wizmir[,-10], method = "pearson")
 ```
 
 Las correlaciones que podemos ver del cuadrante anterior son:
+
 * La temperatura mínima y máxima están correlacionadas entre ellas.
-* El punto de rocío está relacionado tanto con las temperaturas máxima y mínima y en menor medida, y de forma inversa, con la presión a nivel del mar.
+* El punto de rocío está relacionado tanto con las temperaturas máxima y mínima y, en menor medida, y de forma inversa, con la presión a nivel del mar.
 * Tanto la temperatura máxima como mínima están relacionadas de forma inversa con la presión atmosférica a nivel del mar. 
 * La visibilidad y la presión estándar tienen una ligera correlación.
 * La visibilidad y la velocidad del viento están fuertemente correlacionadas. 
 
+##Conclusión
 
-Como conclusión de estos datos diría que el mejor modelo para predecir la temperatura media es un modelo de regresión lineal donde intervengan las variables de temperatura máxima y mínima y habría que estudiar si añadir las variables de rocío y presión a nivel del mar supone alguna mejora. 
+Sobre este dataset se podría decir:
+
+* El mejor modelo para predecir la temperatura media es un modelo de regresión lineal donde intervengan las variables de temperatura máxima y mínima.
+* Habría que estudiar si añadir las variables de rocío y presión a nivel del mar supone alguna mejora. 
 
 \newpage
 #Regresión
   
-  La regresión es el proceso estadístico por el que se estiman la relación entre una o varias variables independientes o predictoras y la variable dependiente, dado un conjunto de datos de entrada. El objetivo de la regresión es obtener un modelo que permita predecir o estimar el valor que tendrá un nuevo dato a su salida, siendo este dato distinto de todos los anteriores que se usaron para crear el modelo.
+  La regresión es el proceso estadístico por el que se estiman la relación entre una o varias variables independientes o predictoras y la variable dependiente que se quiere predecir, dado un conjunto de datos de entrada. El objetivo de la regresión es obtener un modelo que permita predecir o estimar el valor que tendrá un nuevo dato a su salida, siendo este dato distinto de todos los anteriores que se usaron para crear el modelo.
+
   Existen varios algoritmos para realizar regresión, pero en este trabajo solamente utilizaremos la regresión lineal simple, la regresión lineal múltiple y el algoritmo de los k- vecinos más cercanos. 
   
-##Problema
-  Utilizaremos regresión para predecir la temperatura media de la ciudad de Izmir que hemos estudiado anteriormente. 
+##Problema a tratar
+  Obtener un modelo de regresión que nos permita predecir la temperatura media de la ciudad de Izmir(Turquía) usando las técnicas de regresión lineal, los k-vecinos más cercanos en conjunto con la validación cruzada.
+
    
 ##Regresores elegidos
    En el apartado de análisis de datos anterior pudimos ver que los mejores regresores para este problema son las variables:
@@ -416,13 +448,13 @@ row.names(linealSimpleModels_comparisonDataFrame) <- c("MaxTemp", "MinTemp","Dew
 linealSimpleModels_comparisonDataFrame
 ```
 
-De esta tabla si miramos la columna de la R^2 ( _rSquared_ ) podemos ver que la temperatura máxima es el mejor regresor del conjunto puesto con un modelo lineal simple explica el 95% de los casos, seguido de cerca por la temperatura mínima que explica el 91% de los casos. El resto de regresores no son tan buenos. 
+Si miramos la columna de la R^2 ( _rSquared_ ) de esta tabla podemos ver que la temperatura máxima es el mejor regresor del conjunto puesto con un modelo lineal simple explica el 95% de los casos, seguido de cerca por la temperatura mínima que explica el 91% de los casos. El resto de regresores no son tan buenos. 
 
 La columna de la R^2 ajustada en este caso no tiene mucho sentido, puesto que es el parámetro de la R^2 ajustada al número de variables del modelo que en este caso es 1, pero se calcula para después poder comparar con el modelo de regresión múltiple. 
 
-El RMSE crece a medida que el modelo es peor en la prediccion de la salida, siendo de prácticamente 3 para el caso de la temperatura máxima y de prácticamente 14 para el caso de la visibilidad que solamente explica el 5% de los casos. 
+El RMSE crece a medida que el modelo empeora su prediccion de la salida, siendo de prácticamente 3 para el caso de la temperatura máxima y de prácticamente 14 para el caso de la visibilidad que solamente explica el 5% de los casos. 
 
-###Modelo de regresión lineal múltiple 
+##Modelo de regresión lineal múltiple 
 
 En la regresión lineal múltiple, se emplea un modelo matemático en el que intervienen varias variables a la vez, creando un hiperplano. 
 
@@ -448,11 +480,12 @@ lmmModel_simpleSubSet = lm(wizmir$Mean_temperature ~ wizmir$Max_temperature+wizm
 summary_lmm_simpleSubset = summary(lmmModel_simpleSubSet)
 rmse_lmm_simpleSubset = rmse(wizmir$Mean_temperature, lmmModel_simpleSubSet$fitted.values)
 comparisonDF = rbind(comparisonDF, c(summary_lmm_simpleSubset$r.squared,summary_lmm_simpleSubset$adj.r.squared,rmse_lmm_simpleSubset))
+comparisonDF
 ```
 
-La introducción de las tres variables del punto de rocío, la presión al nivel del mar y la visibilidad solamente mejora el modelo en una décima del parámetro de R^2 ajustado, por lo que ante la decisión de elegir este modelo u el otro preferiría el anterior por simplicidad.
+La introducción de las tres variables del punto de rocío(modelo notado con el número 7), la presión al nivel del mar y la visibilidad solamente mejora el modelo en una décima del parámetro de R^2 ajustado con respecto al modelo que solamente tiene la temperatura máxima y mínima, por lo que ante la decisión de elegir este modelo u el otro preferiría el anterior por simplicidad.
 
-####Modelos de regresión lineal múltiple con interacciones.
+###Modelos de regresión lineal múltiple con interacciones.
 Ante los resultados del análisis de correlación tenemos que la temperatura mínima y máxima están muy correladas, por lo que vamos a crear un modelo de regresión lineal múltiple con una iteración entre ellas. 
 
 ```{r}
@@ -463,10 +496,12 @@ comparisonDF = rbind(comparisonDF, c(summary_lmm_Innt$r.squared,summary_lmm_Innt
 summary_lmm_Innt
 ```
 
-Si observamos la tabla de las variables que intervienen en el modelo, podemos ver como la interacción entre las dos variables de temperatura no es significativo. 
-Además que los coeficientes de las dos temperaturas se acercan a la estimación de la hipótesis previa de que cada una de ellas intervienen en un 50%, cada una por la definición de media. 
 
-El siguiente modelo se tiene en cuenta que las variables de temperatura están correladas con el punto de rocío. 
+Si observamos la tabla de las variables que intervienen en el modelo, podemos ver como la interacción entre las dos variables de temperatura no es significativo para el modelo. 
+
+Además que los coeficientes de las dos temperaturas se acercan a la estimación de la hipótesis previa de que cada una de ellas intervienen en un 50%, cada una por la definición de media, pero esto ya sucedía desde el modelo de regresión lineal múltiple. 
+
+El siguiente modelo se tiene en cuenta que las variables de temperatura están correladas con el punto de rocío, y añade este último al modelo. 
 ```{r}
 lmmInnt2 = lm(wizmir$Mean_temperature ~ wizmir$Max_temperature*wizmir$Min_temperature*wizmir$Dewpoint)
 summary_lmm_Innt2 = summary(lmmInnt2)
@@ -474,13 +509,15 @@ rmse_lmm_Innt2 = rmse(wizmir$Mean_temperature, lmmInnt2$fitted.values)
 comparisonDF = rbind(comparisonDF, c(summary_lmm_Innt2$r.squared,summary_lmm_Innt2$adj.r.squared,rmse_lmm_Innt2))
 summary_lmm_Innt2
 ```
+
+
 Como se muestra en el resumen, la variable de punto de rocío, no es significante en el modelo al igual que su interacción con la variable punto de rocío. Por su lado, la interacción entre las tres variables es menos significante que el resto de variables. 
 
-Viendo estos modelos con interacción, la afirmación anterior de que será difícil encontrar un modelo que mejore el modelo lineal múltiple en el que intervienen las dos temperaturas. 
+Viendo estos modelos con interacción, la afirmación anterior de que será difícil encontrar un modelo que mejore el modelo lineal múltiple en el que intervienen las dos temperaturas se mantiene cierta. 
 
-####Modelos no lineales. 
+###Modelos no lineales. 
 
-Si rescatamos las representaciones de la temepratura media con respecto al punto de rocío y a la presión a nivel del mar podemos dudar de que el modelo que sigue es un modelo lineal o un modelo de orden dos. Por ello vamos a probar modelos en los que se le añaden estas dos variables al modelo lineal múltiple de las dos variables de temperatura. 
+Si volvemos amirar las representaciones de la temepratura media con respecto al punto de rocío y a la presión a nivel del mar podemos dudar de que el modelo que sigue es un modelo lineal o un modelo de orden dos o modelo cuadrático. Por ello vamos a probar modelos en los que se le añaden estas dos variables al modelo lineal múltiple de las dos variables de temperatura, para ello vamos a hacer uso de la función _poly_ al que le indicamos la variable y el orden al que queremos el polinomio y esta función nos añadirá al modelo el término especificado y todos aquellos que tienen orden inferior.
 
 ```{r}
 lmmNL = lm(wizmir$Mean_temperature ~ wizmir$Max_temperature+wizmir$Min_temperature+poly(wizmir$Dewpoint,2))
@@ -489,7 +526,9 @@ rmse_lmm_NL = rmse(wizmir$Mean_temperature, lmmNL$fitted.values)
 comparisonDF = rbind(comparisonDF, c(summary_lmm_NL$r.squared,summary_lmm_NL$adj.r.squared,rmse_lmm_NL))
 summary_lmm_NL
 ```
-Este modelo no supone ninguna diferencia con respecto a la modelo lineal múltiple con las dos temperaturas sin el punto de rocío. 
+
+\newpage
+Este modelo no supone ninguna diferencia con respecto a la modelo lineal múltiple con las dos temperaturas sin el punto de rocío. Por ello vamos a probar con un modelo de grado dos con la temperatura a nivel del mar.
 
 ```{r}
 lmmNL2 = lm(wizmir$Mean_temperature ~ wizmir$Max_temperature+wizmir$Min_temperature+poly(wizmir$Sea_level_pressure,2))
@@ -498,7 +537,10 @@ rmse_lmm_NL2 = rmse(wizmir$Mean_temperature, lmmNL2$fitted.values)
 comparisonDF = rbind(comparisonDF, c(summary_lmm_NL2$r.squared,summary_lmm_NL2$adj.r.squared,rmse_lmm_NL2))
 summary_lmm_NL2
 ```
+
+\newpage
 En este modelo todas las variables son significantes pero no supone ningún tipo de mejoría relevante si miramos el parámetro de la R^2 ajustada con respecto a los modelos anteriores. 
+
 
 ```{r}
 row.names(comparisonDF) <-  c("MaxTemp", "MinTemp","DewPoint","SeaPressure","Visibility","ML_MinMax","ML_Subset","Innt_MinXMax", "Innt_XDewPoint","NL_DewPoint","NL_SeaPress")
@@ -506,19 +548,25 @@ comparisonDF
 ```
 
 Como se puede comprobar de la tabla anterior, el modelo lineal de la temperatura máxima es lo suficientemente bueno por si solo aunque tiene un 5% de fallo que corrige casi por completo al añadir al modelo la temperatura mínima. Siendo este modelo el más simple que representa el 99% de los casos. 
+\newpage  
 
-###Modelo Knn con Cross-validation de 5-particiones
+##Modelo Knn con Cross-validation de 5-particiones
 Otra técnica para elaborar un modelo de regresión es el modelo de los K vecinos más cercanos( _K nearest neighbours_ o _knn_), en esta técnica se utiliza la información de los k vecinos más cercanos para dar la salida a los datos de entrada. Este modelo tiende a ajustarse a los datos cuanto mayor sea el valor de k.
 
-Vamos a combinar esta técnica con la validación cruzada. Esta técnica consiste en dividir los datos de entrada en n particiones, en este caso serán 5, aplicar el algoritmo seleccionando una de las particiones como test y el resto como entrenamiento para la elaboración del modelo. Una vez tenga el modelo obtendrá la bondad con la partición de test y guardará esta bondad para volver a crear el modelo a partir de una nueva selección de particiones y una nueva partición de test, y así hasta que todas las particiones hayan sido la partición de test. Entonces se hará una media de todas las bondades calculadas y se hará la media. 
+Vamos a combinar esta técnica con la validación cruzada. La validación cruzada consiste en dividir los datos de entrada en n particiones, en este caso serán 5, aplicar el algoritmo seleccionando una de las particiones como test y el resto como entrenamiento para la elaboración del modelo. Una vez tenga el modelo obtendrá la bondad con la partición de test y guardará esta bondad para volver a crear el modelo a partir de una nueva selección de particiones y una nueva partición de test, y así hasta que todas las particiones hayan sido la partición de test. Entonces se hará una media de todas las bondades calculadas y se hará la media. 
 
-Para la creación de un modelo del tipo Knn necesitamos de las librerías MASS y kknn de R por lo que las cargamos ahora con los comando require
+Para la creación de un modelo del tipo Knn necesitamos de las librerías _MASS_ y _kknn_ de R por lo que las cargamos ahora con los comando _require_
+
+
 ```{r}
 require("MASS")
 require("kknn")
 ```
 
-Cargamos con el siguiente comando las particiones:
+
+Creamos la función que nos devolverá el RMSE del modelo KNN que le indiquemos.
+
+
 ```{r}
 nombre <- "./WizmirRegression/wizmir/wizmir"
 run_knn_fold <- function(i, x, tt = "test") {
@@ -543,14 +591,19 @@ run_knn_fold <- function(i, x, tt = "test") {
 }
 ```
 
-Con los datos cargados obtenemos el error cuadrático de los modelos de kknn para la fase de entrenamiento y de testeo. 
+
+Ahora es el momento de obtener el RMSE de la fase de entrenamiento y de la fase de testeo.
+
+
 ```{r}
 knnMSEtrain<-mean(sapply(1:5,run_knn_fold,nombre,"train"))
 knnMSEtest<-mean(sapply(1:5,run_knn_fold,nombre,"test"))
 knnMSEtrain
 knnMSEtest
 ```
-La diferencia es de 4, por lo que se deduce que el modelo knn se ajusta demasiado a los datos en la fase de entrenamiento. 
+
+
+La diferencia entre los errores es de 4, por lo que se deduce que el modelo knn se ajusta demasiado a los datos en la fase de entrenamiento. 
 
 Si miramos estos errores con los obtenidos por los distintos modelos lineales anteriormente obtenidos 
 
@@ -562,11 +615,13 @@ comparisonDF$rmse_lm_results
 Vemos que el error de 2.53 podría aproximarse con el modelo de regresión lineal simple obtenido solamente con la variable temperatura máxima que tiene un 0.95 de valor en R^2, mientras que el error de 6.06 cae entre el error del modelo lineal simple de la temperatura mínima que tiene un valor de 0.91 de R^2 y el modelo lineal simple del punto de rocío que tiene 0.61 como valor para el R^2. Mientras que tiene mayor error que cualquiera de los modelos de regresión lineal multiple que ninguno llega al 1.4 de error y todos tienen un 0.99 de R^2 .
 
 
-No podemos comparar este algoritmo con el algoritmo de regresión lineal múltiple puesto que cada uno recibe una entrada distinta y se construye con un conjunto de variables 
+##Comparación entre algoritmos (KNN y LM)
 
-####Comparación entre algoritmos (KNN y LM)
-La verdad es que no se pueden comparar los dos algoritmos con los modelos que hemos creado hasta este punto puesto que ninguno tiene ni las mismas variables en el modelo ni los mismos ejemplos en la fase de entrenamiento y testeo. 
-Por ello vamos a desarrollar un nuevo modelo lineal simple que al igual que el modelo obtenido por knn tenga todas las variables para la construcción del mismo y los mismos ejemplos para cada fase, o lo que es lo mismo que intervenga la validación cruzada. 
+
+No se pueden comparar los dos algoritmos con los modelos que hemos creado hasta este punto puesto que no tienen ni las mismas variables en el modelo ni los mismos ejemplos en la fase de entrenamiento y testeo. 
+
+Por ello vamos a desarrollar un nuevo modelo lineal múltiple que al igual que el modelo obtenido por knn tenga todas las variables para la construcción del mismo y los mismos ejemplos para cada fase, o lo que es lo mismo que intervenga la validación cruzada. Para ello modificamos la función anterior para que el modelo que se genere sea un modelo lineal y nos siga devolviendo el MSE del mismo. 
+
 
 ```{r}
 run_lm_fold <- function(i,x,tt = "test"){
@@ -596,16 +651,22 @@ lmMSEtrain
 lmMSEtest
 ```
 
+\newpage
+
+
 Con estos nuevos valores de error si que podemos comparar los dos algoritmos a nivel de error cometido. Podemos ver claramente que el error de entrenamiento es menor para el modelo de regresión lineal tanto para el entrenamiento como para el testeo que el obtenido por el modelo de knn, y en ambos casos con valores parecidos a los que obtuvimos para los modelos sin la valoración cruzada. 
 
-###Comparación de algoritmos
+
+##Comparación de algoritmos
 
 Para hacer un test más fiable y cuantitativo que compare los algoritmos podemos realizar los test de Wilconxon,Friedman y Holm.
 
-####Wilconxon
- El test de Wilconxon es un test no paramétrico con el que se comprueba que dos conjuntos de muestras son iguales y cuya hipótesis nula es que ambas muestras pertenecen a una misma distribución continua y simétrica respecto a una mediana que es igual a 0.
+###Wilconxon
+ El test de Wilconxon es un test no paramétrico con el que se comprueba que dos conjuntos de muestras pertenencen a la misma distribución estadística. La hipótesis nula de este test es que ambas muestras pertenecen a una misma distribución continua y simétrica respecto a una mediana que es igual a 0.
+ 
  
  Esta distribución se construye con la diferencia entre las dos muestras, las muestras son los errores cometidos en cada una de las particiones de la validación cruzada, tanto para la fase de entrenamiento como para la de test.
+ 
  
 ```{r}
 collection_mse_train_lm = sapply(1:5,run_lm_fold,nombre,"train")
@@ -631,11 +692,14 @@ p_value = w1$p.value
 
 c(Rplus, Rminus,p_value)
 ```
+
+
 Puesto que el p-value es menor que 0.05, rechazamos la hipótesis nula de que ambos errores siguen la misma distribución, y, por tanto, de que los algoritmos sean igual de buenos. 
 
-####Friedman
+###Friedman
 
-Podemos comparar tres muestras distintas, o lo que es lo mismo, la salida de tres algoritmos distintos si usamos el test de Friedman. El algoritmo que vamos a añadir a la lista es el modelo lineal de cinco regresores. Para poder compararlo usaremos también la validación cruzada sobre él.
+El test de Fiedman nos permite realizar la misma prueba que en el caso anterior pero comparando tres muestras distintas. En este caso el algoritmo que vamos a añadir a la comparación es el modelo lineal de cinco regresores. Para poder compararlo usaremos también la validación cruzada sobre él.
+
 
 ```{r}
 run_lmm_fold <- function(i,x,tt = "test"){
@@ -667,9 +731,15 @@ collection_mse_lmm = c(collection_mse_train_lmm,collection_mse_test_lmm)
 data = as.matrix(cbind(collection_mse_lm,collection_mse_knn,collection_mse_lmm))
 friedman.test(data)
 ```
+
+
 Dado que el valor del p-value es menor que 0.05, podemos decir que existe una diferencia significativa entre los tres conjuntos.
 
-####Holms
+\newpage
+
+###Holms
+
+
 Ahora que sabemos que existen diferencias entre los algoritmos vamos a realizar el test de Holms para ver entre que pares de algoritmos existen las diferencias.
 
 ```{r}
@@ -682,9 +752,9 @@ Existen diferencias significativas entre cualquier par de algoritmos al 95% de c
 
 ##Conclusión a la regresión
 
-Una vez vistos todos los algoritmos y sus posibilidades, si tuviera que elegir un modelo entre todos los generados escogería el modelo de regresión lineal múltiple en el que intervienen únicamente la temperatura mínima y la máxima, por la simplicidad del modelo y porque su valor de R^2 es del 0.99.
-
+Una vez vistos todos los algoritmos y sus posibilidades, si tuviera que elegir un modelo entre todos los generados escogería el modelo de regresión lineal múltiple en el que intervienen únicamente la temperatura mínima y la máxima, por la simplicidad del modelo y porque su valor de R^2 es del 0.99 y la explicación del mismo es muy similiar a la definición de la media aritmética entre la temperatura máxima y mínima.
 \newpage
+
 #Clasificación
 
 El problema de clasificación que se intentará resolver en esta sección es el de la aprovación de crédito en Australia. El inconveniente que tiene este conjunto de datos es que ninguna de las variables que se proporcionan tiene un nombre descriptivo solamente contamos con el rango de valores de cada una de ellas, como ya se vió en la sección de análisis de datos. 
@@ -695,7 +765,10 @@ Para realizar la clasificación se probarán tres algoritmos: los K-vecinos más
 require("caret")
 ```
 
-En este apartado recuperamos los datasets que habíamos desarrollado para la fase de análisis de datos:
+
+En este apartado recuperamos el dataset que habíamos desarrollado para la fase de análisis de datos:
+
+
 ```{r}
 australian <- read.csv("./AustralianClassification/australian/australian.dat", comment.char = "@", header = FALSE)
 names(australian) <- c("A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11","A12","A13","A14","A15")
@@ -732,16 +805,21 @@ test_labels_australian = australian[414:690,15]
 
 ##Los k vecinos más cercanos. 
 
-La técnica de los K-vecinos más cercanos (KNN de su traducción al inglés) es una técnica considerada _lazy algoritm_ o algoritmo gandul, por el hecho de que no realiza ningún cálculo especial durante la fase de entrenamiento sino que se dedica a almacenar los datos y en la fase de predicción realiza todo el trabajo. El procedimiento que realiza la técnica de los k-vecinos más cercanos es el cálculo de la distancia del punto a clasificar con todos los puntos existentes en la base de datos hasta el momento, seleccionando los k más cercanos y decidiendo según sus datos que valor se le da a la etiqueta de clasificación. 
+La técnica de los K-vecinos más cercanos (KNN de su traducción al inglés) es una técnica considerada _lazy algoritm_ o algoritmo gandul, por el hecho de que no realiza ningún cálculo especial durante la fase de entrenamiento sino que se dedica a almacenar los datos y en la fase de predicción realiza todo el trabajo. 
+
+El procedimiento que realiza la técnica de los k-vecinos más cercanos es el cálculo de la distancia del punto a clasificar con todos los puntos existentes en la base de datos hasta el momento, seleccionando los k más cercanos y decidiendo según sus datos que valor se le da a la etiqueta de clasificación. 
 
 Los datos tienen que ser normalizados antes de utilizarlos en el algoritmo ya que muchos de ellos tienen un rango muy amplio y otros más reducido. Para ello utilizaremos el parámetro de la función de knn "scale" que nos permitirá de forma sencilla normalizar los datos y ejecutar el algoritmo en una única línea de código.
 Otra precaución que hay que tomar con los datos de las etiquetas es que tienen que ser tratados como factores para que caret sea capaz de determinar que el algoritmo es para clasificación y no para regresión, pero de eso ya nos hemos encargado en el apartado anterior de preparación de datos. 
 
 ```{r}
+set.seed(2)
 knnModel = train(x = training_australian, y = training_labels_australian, method = "knn", preProc = c("center","scale"), metric="Accuracy", tuneGrid = data.frame(.k=1:15))
 knnModel
 
 ```
+
+\newpage
 
 Hay que puntualizar que la generación del modelo con caret, pese al esfuerzo, ha ignorado las variables factor que teníamos con sus correspondientes contrastes.
 
@@ -759,9 +837,9 @@ La presición obtenida no varía significativamente con respecto de la obtenida 
 
 ##Linear Discriminat Analysis (LDA)
 
-La técnica de la discriminación linear separa los datos asumiendo que cada clase pertenece a una distribución de probabilidad distinta. Además asume que cada una de las variables de entrada sigue una distribución normal, hecho que se probó en la fase de análisis que no ocurría con ninguna de las variables y por ello no se espera que ni este ni el algoritmo QDA funcionen bien. No solo espera la normalidad sino que las varianzas son iguales o muy similares entre los conjuntos de salida.
+La técnica de la discriminación linear separa los datos asumiendo que cada clase pertenece a una distribución de probabilidad distinta, con la misma covarianza. Para cada una de las variables de entrada sigue una distribución normal, hecho que se probó en la fase de análisis que no ocurría con ninguna de las variables y por ello no se espera que ni este ni el algoritmo QDA funcionen bien. 
 
-Usando el mismo conjunto de entrenamiento que antes vamos a elaborar un nuevo modelo basado en el algoritmo LDA que se encuentra en la librería MASS que hemos cargado anteriormente para la parte de regresión:
+Usando el mismo conjunto de entrenamiento que antes vamos a elaborar un nuevo modelo basado en el algoritmo LDA:
 
 ```{r}
 
@@ -776,13 +854,19 @@ cm_lda = confusionMatrix(ldaPrediction, test_labels_australian)
 
 La eliminación de la variable A4 y A12 al igual que en el caso anterior se debe a que caret no trabaja con factores, ni maneja los constrastes de los mismos. 
 
+
+Hay que puntualizar, que tanto LDA como QDA generan los mismos resultados tanto para los datos normalizados como para los datos sin normalizar. 
+
+
 Tras construir el modelo se utilizó éste para predecir los valores de train que teníamos separados desde antes y realizamos una tabla de confusión de la que extraemos los verdaderos positivos y los verdaderos negativos para sumarlos y compararlos con el total del conjunto, de esta forma tenemos la medida de presición de la fase de entrenamiento y de la fase de testeo. 
+
+
 Dicho error no varía significativamente de una fase a otra, ni tampoco con el algoritmo de los K vecinos más cercanos, por lo que el algoritmo se da por bueno. 
 
 
-##Quadratic Discriminant Analysis
+##Quadratic Discriminant Analysis (QDA)
 
-Como se comentó antes, LDA asume que las varianzas de las distribuciones de salida son la misma pero QDA no. QDA estima una varianza/covarianza para cada una de las clases de salida. 
+Como se comentó antes, LDA asume que las varianzas de las distribuciones de salida son la misma pero QDA no. QDA estima una varianza/covarianza para cada una de las clases de salida. En la fase de análisis de datos se demostró que los conjuntos de salida tienen la misma varianza por lo que no se espera que este método sea especialmente bueno. 
 
 ```{r}
 
@@ -794,11 +878,16 @@ cm_qda = confusionMatrix(qdaPrediction, test_labels_australian)
 (cm_qda$table[1,1] + cm_qda$table[2,2])/sum(cm_qda$table)
 ```
 
-El método QDA se ha presentado como el método con el peor resultado de presición de los tres métodos explorados, con un 82% de presición para la etapa de entrenamiento y con un 79% en la fase de test. Esto será debido a que las varianzas de los conjuntos de salida son muy similares y al presuponer QDA que son distintas entra en error. 
+El método QDA se ha presentado como el método con el peor resultado de presición de los tres métodos explorados, con un 81% de presición para la etapa de entrenamiento y con un 79% en la fase de test. Esto será debido a que las varianzas de los conjuntos de salida son muy similares y al presuponer QDA que son distintas entra en error. 
+
+\newpage
 
 ##Comparación de los tres algoritmos
 
-A la hora de comparar los tres algoritmos vamos a cambiar el método de elaboración de los modelos para introducirles la validación cruzada. De esta forma podremos comparar sabiendo que los tres métodos han probado todas las combinaciones de particiones para generar el modelo en la fase de entrenamiento. Para hacer la validación cruzada tomaremos la función que hemos usado en el apartado de regresión y le haremos unos ajustes para que nos s
+A la hora de comparar los tres algoritmos vamos a cambiar el método de elaboración de los modelos para introducirles la validación cruzada. De esta forma podremos comparar sabiendo que los tres métodos han probado todas las combinaciones de particiones para generar el modelo en la fase de entrenamiento. 
+
+
+La validación cruzada la realizaremos con la función que hemos usado en el apartado de regresión y le haremos unos ajustes para que nos devuelva la presición del método que deseamos, también ajustando el número de particiones a 10.
 
 ```{r}
 nombre <- "australian"
@@ -839,8 +928,11 @@ runFold <- function(i,x,tt = "test",method){
 }
 
 knnPredict = sapply(1:10,runFold,nombre,"train","knn")
+knnPredict = c(knnPredict,sapply(1:10,runFold,nombre,"test","knn") )
 ldaPrediction = sapply(1:10,runFold,nombre,"train","lda")
+ldaPrediction = c(ldaPrediction,sapply(1:10,runFold,nombre,"test","lda"))
 qdaPrediction = sapply(1:10,runFold,nombre,"train","qda")
+qdaPrediction = c(qdaPrediction,sapply(1:10,runFold,nombre,"test","qda"))
 ```
 
 
@@ -858,9 +950,42 @@ groups2 <- rep(1:dim(classificationPredictions)[2], each=dim(classificationPredi
 pairwise.wilcox.test(classificationPredictions, groups2, p.adjust= "holm", paired = TRUE)
 ```
 
-Podemos ver en el cuadrante anterior que para el test de Holm el modelo KNN y el modelo de LDA son iguales con el 95,9% de confianza, mientras que en el caso de QDA con KNN y QDA con LDA no hay un p-value lo suficientemente significativo para decir que son iguales.  
+Podemos ver en el cuadrante anterior que para el test de Holm el modelo KNN y el modelo de LDA son iguales con un p-value de más del 0.05, mientras que en el caso de QDA con KNN y QDA con LDA no hay un p-value lo suficientemente significativo para decir que son iguales.  
 
-##Conclusión
+##Conclusión al apartado de clasificación.
 
 Ante los modelos de los tres algoritmos no podemos decir que exista diferencia entre el modelo de KNN y LDA a nivel de presición de la clasificación, pero como ya se comentó en su momento, el método KNN es un algoritmo que no construye el modelo en la fase de entrenamiento, sino que en la fase de test realiza todos los cálculos lo que implica que es lento para dar una respuesta ante una entrada concreta.
 Por esto me inclino a decir que para este problema concreto el mejor modelo es el de LDA. 
+
+\newpage
+
+#Conclusión
+
+En este trabajo he aplicado los conocimientos obtenidos en la asignatura, como pueden ser:
+
+* Análisis de datos usando el mínimo, máximo, los cuartiles, la mediana, la media y la moda de los mismos.
+* La elaboración de scatter plots para comparar variables.
+* La construcción de gráficos de barras para mostrar la frecuencia.
+* La realización de test de normalidad de los datos.
+* La realización de test de igualdad de varianzas. 
+* El planteamiento de hipótesis previas sobre el problema para corroborarlo con los datos. 
+* La elaboración de modelos de regresión lineal simple, múltiple, con interacciones entre variables y con no linealidades. 
+* La elaboración de modelos basados en la técnica de los k-vecinos más cercanos tanto para modelos predictivos como para clasificación.
+* La elaboración de modelos de discriminación lineal y cuadrática para clasificación de datos. 
+* La comparación de algoritmos mediante los test de Wilcoxon,Friedman y Holms.
+* La utilización de la validación cruzada para evitar el sobreajuste de los modelos a los datos de entrenamiento. 
+
+\newpage
+#Bibliografía
+
+1. [UCI Machine Learning Repository.]( https://archive.ics.uci.edu/ml/datasets/Statlog+%28Australian+Credit+Approval%29)
+2. [Validación cruzada - Wikipedia.](https://es.wikipedia.org/wiki/Validaci%C3%B3n_cruzada#Objetivo_de_la_validaci.C3.B3n_cruzada)
+3. [Perfom a Shapiro-Wilk Normality Test - Stackoverflow](http://stackoverflow.com/questions/15427692/perform-a-shapiro-wilk-normality-test)
+4. [Linear and Quadratic Discriminant Analysis - SciKit Learn](http://scikit-learn.org/stable/modules/lda_qda.html)
+5. [How to use Levene Test - StackExchange](http://stats.stackexchange.com/questions/15722/how-to-use-levene-test-function-in-r)
+6. [Test de Levene para la igualdad de varianzas - El blog de los erreros](http://erre-que-erre-paco.blogspot.com.es/2009/11/test-de-levene-para-la-igualdad-de.html)
+7. [Igualdad de varianzas en R - Aqueronte](http://erre-que-erre-paco.blogspot.com.es/2009/11/test-de-levene-para-la-igualdad-de.html) 
+8. [The caret package](http://topepo.github.io/caret/index.html)
+9. [Preprocess function - R Documentation](http://topepo.github.io/caret/index.html)
+10. [Contrast Coding Systems for categorical variables](http://www.ats.ucla.edu/stat/r/library/contrast_coding.htm)
+
