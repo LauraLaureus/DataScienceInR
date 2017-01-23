@@ -1,0 +1,38 @@
+---
+title: "Extracción de reglas"
+author: "Laura del Pino Díaz"
+date: "23/1/2017"
+header-includes: \usepackage[spanish]{babel}
+output: pdf_document
+toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Introducción
+
+La extracción de reglas de asociación es una técnica de la minería de datos que nos permite extraer conocimiento de las bases de datos. En este trabajo trata de extraer conocimiento de la base de datos _lymphography_. 
+
+La base de datos _lymphography_ contiene los atributos más descriptivos de las linfografías médicas, a saber:
+
+* Lymphatics, nominal cuyos valores son {normal,arched,deformed,displaced}
+* Block_of_affere de tipo nominal que toma los valores {no,yes}
+* Bl_of_lymph_c de tipo nominal que toma los valores {no,yes}
+* Bl_of_lymph_s de tipo nominal que toma los valores {no,yes}
+* By_pas de tipo nominal que toma los valores {no,yes}
+* Extravasates de tipo nominal que toma los valores {no,yes}
+* Regeneration_of de tipo nominal que toma los valores {no,yes}
+* Early_uptake_in de tipo nominal que toma los valores {no,yes}
+* Lym_nodes_dimi de tipo numérico discreto que toma los valores [0,3]
+* Lym_nodes_enlar de tipo numérico que toma los valores [1,4]
+* Change_in_lym de tipo nominal que toma los valores {bean,oval,round}
+* Defect_in_node de tipo nominal que toma los valores {no,lacunar,lac_margin,lac_central}
+* Changes_in_node de tipo nominal que toma los valores {no,lacunar,lac_margin,lac_central}
+* Changes_in_stru de tipo nominal que toma los valores {no,grainy,drop_lik,coarse,diluted,reticular,stripped,faint}
+* Special_form de tipo nominal que toma los siguientes valores {no,chalices,vesicles}
+* Dislocation_of de tipo nominal que toma los valores {no,yes}
+* Exclusion_of_no de tipo nominal que toma los valores {no,yes}
+* No_of_nodes_in de tipo numérico discreto que toma los valores [1,8]
+* Class de tipo nominal que toma los valores {normal,metastases,malig_lymph,fibrosis}
