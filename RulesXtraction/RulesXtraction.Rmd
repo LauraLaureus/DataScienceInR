@@ -36,3 +36,7 @@ La base de datos _lymphography_ contiene los atributos más descriptivos de las 
 * Exclusion_of_no de tipo nominal que toma los valores {no,yes}
 * No_of_nodes_in de tipo numérico discreto que toma los valores [1,8]
 * Class de tipo nominal que toma los valores {normal,metastases,malig_lymph,fibrosis}
+
+```{r}
+datos <- read.csv("lymphography.dat", comment.char = "@")
+```
