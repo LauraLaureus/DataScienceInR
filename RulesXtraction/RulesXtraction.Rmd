@@ -37,6 +37,92 @@ La base de datos _lymphography_ contiene los atributos más descriptivos de las 
 * No_of_nodes_in de tipo numérico discreto que toma los valores [1,8]
 * Class de tipo nominal que toma los valores {normal,metastases,malig_lymph,fibrosis}
 
+La base de datos la he tomado de la página web de KEEL por lo que habrá que tener en cuenta el apartado descriptivo que aparece en la parte superior del fichero.
+
 ```{r}
 datos <- read.csv("lymphography.dat", comment.char = "@")
+colnames(datos) <- c("Lymphatics", "Block_of_affere", "Bl_of_lymph_c","Bl_of_lymph_s","By_pas", "Extravasates","Regeneration_of","Early_uptake_in","Lym_nodes_dimi","Lym_nodes_enlar","Change_in_lym","Defect_in_node","Changes_in_node","Changes_in_stru", "Special_form","Dislocation_of","Exclusion_of_no","No_of_nodes_in","Class")
 ```
+
+#Preparación de los datos
+
+Para realizar la extracción de reglas tenemos que preparar los datos para que estén en un formato que nos facilite el trabajo. Este formato es un formato binario donde los valores sean 0 y 1 que nos permita extraer el los casos en los que aparece el atributo y en los que no, para metricas como la _confianza confirmada_ es necesario conocer los casos en donde se da un valor y su contrario. 
+
+Esta transformación la conseguimos con el siguiente conjunto de funciones:
+
+```{r}
+transformDataToBinary <- function(lvl,data){
+  result = sapply(data,function(x){ifelse(x==lvl,1,0)})
+  return(result)
+}
+
+selectData <-function(column){
+   if(is.factor(column) && length(levels(column))>2){
+     lvls = levels(column)
+     m = matrix(nrow = 147, ncol = 0)
+     m = data.frame(m)
+     for(lvl in lvls){
+      d = transformDataToBinary(lvl,column)
+      d = as.factor(d)
+      m = cbind(m,d)
+     }
+     colnames(m) <- lvls
+     return(m)
+   }
+  else if(!is.factor(column)){
+    return(selectData(as.factor(column)))
+  }
+  else{
+    return(column)
+  }
+}
+
+expandDataFrame <- function(dataFrame){
+  extendedData = selectData(datos[,1])
+  for(i in 2:(dim(dataFrame)[2])){
+    extendedData = cbind(extendedData,selectData(datos[,i]))
+  }
+  return(extendedData)
+}
+
+expandedDataFrame = expandDataFrame(datos)
+
+#str(expandedDataFrame) No todas las columnas tienen un nombre representativo
+
+namesExpanedDataFrame = names(expandedDataFrame)
+namesExpanedDataFrame[5] = "Block_of_affere"
+namesExpanedDataFrame[6] = "Bl_of_lymph_c"
+namesExpanedDataFrame[7] = "Bl_of_lymph_s"
+namesExpanedDataFrame[8] = "By_pas"
+namesExpanedDataFrame[9] = "Extravasates"
+namesExpanedDataFrame[10] = "Regeneration_of"
+namesExpanedDataFrame[11] = "Early_uptake_in"
+namesExpanedDataFrame[12] = "Lym_nodes_dimi=1"
+namesExpanedDataFrame[13] = "Lym_nodes_dimi=2"
+namesExpanedDataFrame[14] = "Lym_nodes_dimi=3"
+namesExpanedDataFrame[15] = "Lym_nodes_enlar=1"
+namesExpanedDataFrame[16] = "Lym_nodes_enlar=2"
+namesExpanedDataFrame[17] = "Lym_nodes_enlar=3"
+namesExpanedDataFrame[18] = "Lym_nodes_enlar=4"
+namesExpanedDataFrame[22] = "Defect_in_node=lac_central"
+namesExpanedDataFrame[23] = "Defect_in_node=lac_margin"
+namesExpanedDataFrame[24] = "Defect_in_node=lacunar"
+namesExpanedDataFrame[25] = "Defect_in_node=no"
+namesExpanedDataFrame[26] = "Defect_in_node=lac_central"
+namesExpanedDataFrame[27] = "Defect_in_node=lac_margin"
+namesExpanedDataFrame[28] = "Defect_in_node=lacunar"
+namesExpanedDataFrame[29] = "Defect_in_node=no"
+namesExpanedDataFrame[41] = "Dislocation_of"
+namesExpanedDataFrame[42] = "Exclusion_of_no"
+namesExpanedDataFrame[43] = "No_of_nodes_in=1"
+namesExpanedDataFrame[44] = "No_of_nodes_in=2"
+namesExpanedDataFrame[45] = "No_of_nodes_in=3"
+namesExpanedDataFrame[46] = "No_of_nodes_in=4"
+namesExpanedDataFrame[47] = "No_of_nodes_in=5"
+namesExpanedDataFrame[48] = "No_of_nodes_in=6"
+namesExpanedDataFrame[49] = "No_of_nodes_in=7"
+namesExpanedDataFrame[50] = "No_of_nodes_in=8"
+colnames(expandedDataFrame) <- namesExpanedDataFrame
+```
+
+
