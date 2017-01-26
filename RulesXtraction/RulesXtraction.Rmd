@@ -86,7 +86,16 @@ expandDataFrame <- function(dataFrame){
 }
 
 expandedDataFrame = expandDataFrame(datos)
+```
 
+En estos momentos en _expandedDataFrame_ tenemos 54 variables creadas a partir de los valores que toman las variables, esto es, si la variable es categorica y tenía tres posibles valores tenemos tres variables a partir de esta de forma que cada nueva variable toma valores de 0 o 1 donde 0 es si no tiene ese valor y 1 en caso de que si toma el valor.
+
+Por suerte aquellas variables que no son categóricas son numéricas discretas con un conjunto reducido de valores de forma que se puede crear una variable por cada uno de los valores del dominio de la variable. 
+
+Por desgracia la salida de la función _expandDataFrame_ no da nombres significativos a todas las variables por lo que es conveniente cambiarles el valor a aquellas que no tienen nombre representativo o que el nombre se repite produciendo confusión.
+
+
+```{r}
 #str(expandedDataFrame) No todas las columnas tienen un nombre representativo
 
 namesExpanedDataFrame = names(expandedDataFrame)
@@ -123,6 +132,15 @@ namesExpanedDataFrame[48] = "No_of_nodes_in=6"
 namesExpanedDataFrame[49] = "No_of_nodes_in=7"
 namesExpanedDataFrame[50] = "No_of_nodes_in=8"
 colnames(expandedDataFrame) <- namesExpanedDataFrame
+```
+
+Ahora que ya tenemos el dataframe en un estado que nos favorece nos queda que cambiar la interpretación que le damos, para que sea del tipo transacción. Para ello cargamos el paquete _arules_ que nos permitirá hacer dicha transformación y además cargaremos el paquete de visualización de reglas de asociación _arulesViz_ que será útil en pasos posteriores.
+
+```{r}
+require(arules)
+require(arulesViz)
+
+transactionData <- as(expandedDataFrame, "transactions")
 ```
 
 
