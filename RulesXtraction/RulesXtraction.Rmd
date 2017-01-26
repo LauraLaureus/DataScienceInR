@@ -117,10 +117,18 @@ namesExpanedDataFrame[22] = "Defect_in_node=lac_central"
 namesExpanedDataFrame[23] = "Defect_in_node=lac_margin"
 namesExpanedDataFrame[24] = "Defect_in_node=lacunar"
 namesExpanedDataFrame[25] = "Defect_in_node=no"
-namesExpanedDataFrame[26] = "Defect_in_node=lac_central"
-namesExpanedDataFrame[27] = "Defect_in_node=lac_margin"
-namesExpanedDataFrame[28] = "Defect_in_node=lacunar"
-namesExpanedDataFrame[29] = "Defect_in_node=no"
+namesExpanedDataFrame[26] = "Changes_in_node=lac_central"
+namesExpanedDataFrame[27] = "Changes_in_node=lac_margin"
+namesExpanedDataFrame[28] = "Changes_in_node=lacunar"
+namesExpanedDataFrame[29] = "Changes_in_node=no"
+namesExpanedDataFrame[30] = "Changes_in_stru=coarsed"
+namesExpanedDataFrame[31] = "Changes_in_stru=diluted"
+namesExpanedDataFrame[32] = "Changes_in_stru=drop_like"
+namesExpanedDataFrame[33] = "Changes_in_stru=faint"
+namesExpanedDataFrame[34] = "Changes_in_stru=grainy"
+namesExpanedDataFrame[35] = "Changes_in_stru=no"
+namesExpanedDataFrame[36] = "Changes_in_stru=reticular"
+namesExpanedDataFrame[37] = "Changes_in_stru=stripped"
 namesExpanedDataFrame[41] = "Dislocation_of"
 namesExpanedDataFrame[42] = "Exclusion_of_no"
 namesExpanedDataFrame[43] = "No_of_nodes_in=1"
@@ -131,6 +139,7 @@ namesExpanedDataFrame[47] = "No_of_nodes_in=5"
 namesExpanedDataFrame[48] = "No_of_nodes_in=6"
 namesExpanedDataFrame[49] = "No_of_nodes_in=7"
 namesExpanedDataFrame[50] = "No_of_nodes_in=8"
+namesExpanedDataFrame[54] = "Class=normal"
 colnames(expandedDataFrame) <- namesExpanedDataFrame
 ```
 
@@ -141,6 +150,16 @@ require(arules)
 require(arulesViz)
 
 transactionData <- as(expandedDataFrame, "transactions")
+summary(transactionData)
 ```
+
+Del resumen anterior obtenermos que los elementos más repetidos son _normal=0_, _Changes in stru=no=0_, _Changes in stru=reticular=0_, _Changes in no nodes=8=0_, _Class=normal=0_ lo que quiere decir que:
+
+* En la mayoría de las transacciones hay un tipo de linfático distinto del normal.
+* En la mayoría de las transacciones hay algún tipo de cambio en la estructura que no es de tipo reticular, convirtiendo este tipo en el más raro con solo dos casos.
+* El cambio en el número de nodos es en la mayoría de los casos distinto de 8.
+* Es raro el caso en el que el linfoma sea normal.
+
+
 
 
