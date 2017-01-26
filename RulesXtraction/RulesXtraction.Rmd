@@ -43,7 +43,7 @@ La base de datos la he tomado de la página web de KEEL por lo que habrá que te
 datos <- read.csv("lymphography.dat", comment.char = "@")
 colnames(datos) <- c("Lymphatics", "Block_of_affere", "Bl_of_lymph_c","Bl_of_lymph_s","By_pas", "Extravasates","Regeneration_of","Early_uptake_in","Lym_nodes_dimi","Lym_nodes_enlar","Change_in_lym","Defect_in_node","Changes_in_node","Changes_in_stru", "Special_form","Dislocation_of","Exclusion_of_no","No_of_nodes_in","Class")
 ```
-
+\newpage
 #Preparación de los datos
 
 Para realizar la extracción de reglas tenemos que preparar los datos para que estén en un formato que nos facilite el trabajo. Este formato es un formato binario donde los valores sean 0 y 1 que nos permita extraer el los casos en los que aparece el atributo y en los que no, para metricas como la _confianza confirmada_ es necesario conocer los casos en donde se da un valor y su contrario. 
@@ -94,8 +94,9 @@ Por suerte aquellas variables que no son categóricas son numéricas discretas c
 
 Por desgracia la salida de la función _expandDataFrame_ no da nombres significativos a todas las variables por lo que es conveniente cambiarles el valor a aquellas que no tienen nombre representativo o que el nombre se repite produciendo confusión.
 
+Por restricciones sobre el número de páginas la sección de código que modifica los nombres de las columnas no se muestra. Se recomienda abrir el fichero .Rmd para visualizarlo. 
 
-```{r}
+```{r,echo=FALSE}
 #str(expandedDataFrame) No todas las columnas tienen un nombre representativo
 
 namesExpanedDataFrame = names(expandedDataFrame)
@@ -160,6 +161,64 @@ Del resumen anterior obtenermos que los elementos más repetidos son _normal=0_,
 * El cambio en el número de nodos es en la mayoría de los casos distinto de 8.
 * Es raro el caso en el que el linfoma sea normal.
 
+Además tenemos la información sobre la longitud máxima de la transacción que en este caso coincide con el número de variables. 
+
+#Visualización de las transacciones
+
+Podemos visualizar las transacciones para ver su comportamiento:
+
+```{r,fig.align="center"}
+image(transactionData)
+```
+
+De la imagen anterior podemos deducir que las transacciones,
+
+Si nos interesa visualizar los items con mayor frecuencia tenemos que reducir los items por el soporte a aquellos que tienen dicho valor a .9 de otra forma la figura sería imposible visualizar algo.
+
+```{r}
+itemFrequencyPlot(transactionData, support = 0.9, cex.names=0.8)
+```
+
+El hecho de que la mayoría de los items mostrados tengan el valor, significa que la información interesante está en las otras variables que toman distintos valores. 
+
+Aún sabiendo que la imagen no mostrará correctamente los nombres de las variables vamos a visualizar los items que se convertirían en frecuentes si se baja el valor de soporte.
+
+```{r}
+itemFrequencyPlot(transactionData, support = 0.2, cex.names=0.8)
+```
+
+El gráfico anterior representa una población de aproximadamente 80 items que se convierten en frecuentes al determinar el umbral en 0.2. 80 items representa más de la mitad de las posibilidades que obtenemos de multiplicar las 54 variables por los 2 posibles valores que pueden tomar. 
+
+#Itemset frecuentes
+
+```{r}
+aPrioriTransactionData = apriori(transactionData, parameter = list(support = 0.1, target="frequent"))
+aPrioriTransactionData = sort(aPrioriTransactionData, by="support")
+```
 
 
+```{r}
+size(aPrioriTransactionData)
+barplot(table(size(aPrioriTransactionData)), xlab="itemsetsize", ylab="count")
+inspect(aPrioriTransactionData[size(aPrioriTransactionData)==1])
+```
 
+##Conjuntos maximales
+
+```{r}
+imaxAPrioriTransactionData<-aPrioriTransactionData[is.maximal(aPrioriTransactionData)]
+inspect(head(sort(imaxAPrioriTransactionData, by="support")))
+```
+
+##Conjuntos cerrados
+
+```{r}
+icloAPrioriTransactionData<-aPrioriTransactionData[is.closed(aPrioriTransactionData)]
+inspect(head(sort(icloAPrioriTransactionData, by="support")))
+```
+
+##Comparación del número de itemset frecuentes, conjuntos maximales y conjuntos cerrados
+
+```{r}
+barplot( c(frequent=length(aPrioriTransactionData), closed=length(aPrioriTransactionData), maximal=length(aPrioriTransactionData)), ylab="count", xlab="itemsets")
+```
