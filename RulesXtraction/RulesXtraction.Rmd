@@ -40,8 +40,10 @@ La base de datos _lymphography_ contiene los atributos más descriptivos de las 
 La base de datos la he tomado de la página web de KEEL por lo que habrá que tener en cuenta el apartado descriptivo que aparece en la parte superior del fichero.
 
 ```{r}
-datos <- read.csv("lymphography.dat", comment.char = "@")
-colnames(datos) <- c("Lymphatics", "Block_of_affere", "Bl_of_lymph_c","Bl_of_lymph_s","By_pas", "Extravasates","Regeneration_of","Early_uptake_in","Lym_nodes_dimi","Lym_nodes_enlar","Change_in_lym","Defect_in_node","Changes_in_node","Changes_in_stru", "Special_form","Dislocation_of","Exclusion_of_no","No_of_nodes_in","Class")
+#datos <- read.csv("lymphography.dat", comment.char = "@")
+#colnames(datos) <- c("Lymphatics", "Block_of_affere", "Bl_of_lymph_c","Bl_of_lymph_s","By_pas", "Extravasates","Regeneration_of","Early_uptake_in","Lym_nodes_dimi","Lym_nodes_enlar","Change_in_lym","Defect_in_node","Changes_in_node","Changes_in_stru", "Special_form","Dislocation_of","Exclusion_of_no","No_of_nodes_in","Class")
+
+datos = read.csv("mushrooms.csv")
 ```
 \newpage
 #Preparación de los datos
@@ -85,7 +87,7 @@ expandDataFrame <- function(dataFrame){
   return(extendedData)
 }
 
-expandedDataFrame = expandDataFrame(datos)
+expandedDataFrame =cbind(datos[,-5],selectData(datos[,5])) 
 ```
 
 En estos momentos en _expandedDataFrame_ tenemos 54 variables creadas a partir de los valores que toman las variables, esto es, si la variable es categorica y tenía tres posibles valores tenemos tres variables a partir de esta de forma que cada nueva variable toma valores de 0 o 1 donde 0 es si no tiene ese valor y 1 en caso de que si toma el valor.
