@@ -157,9 +157,12 @@ imaxAPrioriTransactionData<-aPrioriTransactionData[is.maximal(aPrioriTransaction
 barplot( c(frequent=length(aPrioriTransactionData), closed=length(aPrioriTransactionData), maximal=length(aPrioriTransactionData)), ylab="count", xlab="itemsets")
 ```
 
+Al ver el número de itemset cerrados y maximales tan igual, podemos decir que los conjuntos son iguales, por lo que podemos presindir del conjunto de los maximales, dado que el conjunto de los itemset cerrados nos permite tener la lista de los más frecuentes y a la vez tener la información del soporte. 
+
+#Obtención de reglas
 
 ```{r}
-rules <-apriori(transactionData, parameter = list(support = 0.1, confidence = 0.8, minlen= 2))
+rules <-apriori(transactionData, parameter = list(support = 0.2, confidence = 0.8, minlen= 2))
 
 summary(rules)
 ```
