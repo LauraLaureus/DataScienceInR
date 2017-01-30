@@ -9,40 +9,43 @@ toc: true
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(width=60)
+knitr::opts_chunk$set(comment = "", warning = FALSE, message = FALSE, echo = TRUE, tidy = TRUE, size="small")
 ```
-
+\newpage
 #Introducción
 
-La extracción de reglas de asociación es una técnica de la minería de datos que nos permite extraer conocimiento de las bases de datos. En este trabajo trata de extraer conocimiento de la base de datos _lymphography_. 
+La extracción de reglas de asociación es una técnica de la minería de datos que nos permite extraer conocimiento de las bases de datos. En este trabajo trata de extraer conocimiento de la base de datos _mushrooms_. 
 
-La base de datos _lymphography_ contiene los atributos más descriptivos de las linfografías médicas, a saber:
+La base de datos _mushrooms_ contiene los atributos que describen las setas y que permitirían clasificar las setas observadas en venenosas y comestibles. Los atributos se listan a continuación:
 
-* Lymphatics, nominal cuyos valores son {normal,arched,deformed,displaced}
-* Block_of_affere de tipo nominal que toma los valores {no,yes}
-* Bl_of_lymph_c de tipo nominal que toma los valores {no,yes}
-* Bl_of_lymph_s de tipo nominal que toma los valores {no,yes}
-* By_pas de tipo nominal que toma los valores {no,yes}
-* Extravasates de tipo nominal que toma los valores {no,yes}
-* Regeneration_of de tipo nominal que toma los valores {no,yes}
-* Early_uptake_in de tipo nominal que toma los valores {no,yes}
-* Lym_nodes_dimi de tipo numérico discreto que toma los valores [0,3]
-* Lym_nodes_enlar de tipo numérico que toma los valores [1,4]
-* Change_in_lym de tipo nominal que toma los valores {bean,oval,round}
-* Defect_in_node de tipo nominal que toma los valores {no,lacunar,lac_margin,lac_central}
-* Changes_in_node de tipo nominal que toma los valores {no,lacunar,lac_margin,lac_central}
-* Changes_in_stru de tipo nominal que toma los valores {no,grainy,drop_lik,coarse,diluted,reticular,stripped,faint}
-* Special_form de tipo nominal que toma los siguientes valores {no,chalices,vesicles}
-* Dislocation_of de tipo nominal que toma los valores {no,yes}
-* Exclusion_of_no de tipo nominal que toma los valores {no,yes}
-* No_of_nodes_in de tipo numérico discreto que toma los valores [1,8]
-* Class de tipo nominal que toma los valores {normal,metastases,malig_lymph,fibrosis}
 
-La base de datos la he tomado de la página web de KEEL por lo que habrá que tener en cuenta el apartado descriptivo que aparece en la parte superior del fichero.
+* cap-shape: bell=b,conical=c,convex=x,flat=f, knobbed=k,sunken=s
+* cap-surface: fibrous=f,grooves=g,scaly=y,smooth=s
+* cap-color: brown=n,buff=b,cinnamon=c,gray=g,green=r,pink=p,purple=u,red=e,white=w,yellow=y
+* bruises: bruises=t,no=f
+* odor: almond=a,anise=l,creosote=c,fishy=y,foul=f,musty=m,none=n,pungent=p,spicy=s
+* gill-attachment: attached=a,descending=d,free=f,notched=n
+* gill-spacing: close=c,crowded=w,distant=d
+* gill-size: broad=b,narrow=n
+* gill-color: black=k,brown=n,buff=b,chocolate=h,gray=g, green=r,orange=o,
+  pink=p,purple=u,red=e,white=w,yellow=y
+* stalk-shape: enlarging=e,tapering=t
+* stalk-root: bulbous=b,club=c,cup=u,equal=e,rhizomorphs=z,rooted=r,missing=?
+* stalk-surface-above-ring: fibrous=f,scaly=y,silky=k,smooth=s
+* stalk-surface-below-ring: fibrous=f,scaly=y,silky=k,smooth=s
+* stalk-color-above-ring: brown=n,buff=b,cinnamon=c,gray=g,orange=o,pink=p,red=e,white=w,yellow=y
+* stalk-color-below-ring: brown=n,buff=b,cinnamon=c,gray=g,orange=o,pink=p,red=e,white=w,yellow=y
+* veil-type: partial=p,universal=u
+* veil-color: brown=n,orange=o,white=w,yellow=y
+* ring-number: none=n,one=o,two=t
+* ring-type: cobwebby=c,evanescent=e,flaring=f,large=l,none=n,pendant=p,sheathing=s,zone=z
+* spore-print-color: black=k,brown=n,buff=b,chocolate=h,green=r,orange=o,purple=u,white=w,yellow=y
+* population: abundant=a,clustered=c,numerous=n,scattered=s,several=v,solitary=y
+* habitat: grasses=g,leaves=l,meadows=m,paths=p,urban=u,waste=w,woods=d
+
 
 ```{r}
-#datos <- read.csv("lymphography.dat", comment.char = "@")
-#colnames(datos) <- c("Lymphatics", "Block_of_affere", "Bl_of_lymph_c","Bl_of_lymph_s","By_pas", "Extravasates","Regeneration_of","Early_uptake_in","Lym_nodes_dimi","Lym_nodes_enlar","Change_in_lym","Defect_in_node","Changes_in_node","Changes_in_stru", "Special_form","Dislocation_of","Exclusion_of_no","No_of_nodes_in","Class")
-
 datos = read.csv("mushrooms.csv")
 ```
 \newpage
@@ -61,7 +64,7 @@ transformDataToBinary <- function(lvl,data){
 selectData <-function(column){
    if(is.factor(column) && length(levels(column))>2){
      lvls = levels(column)
-     m = matrix(nrow = 147, ncol = 0)
+     m = matrix(nrow = 8124, ncol = 0)
      m = data.frame(m)
      for(lvl in lvls){
       d = transformDataToBinary(lvl,column)
@@ -79,76 +82,17 @@ selectData <-function(column){
   }
 }
 
-expandDataFrame <- function(dataFrame){
-  extendedData = selectData(datos[,1])
-  for(i in 2:(dim(dataFrame)[2])){
-    extendedData = cbind(extendedData,selectData(datos[,i]))
-  }
-  return(extendedData)
-}
-
-expandedDataFrame =cbind(datos[,-5],selectData(datos[,5])) 
+expandedDataFrame =cbind(datos[,-19],selectData(datos[,"ring.number"])) 
 ```
 
-En estos momentos en _expandedDataFrame_ tenemos 54 variables creadas a partir de los valores que toman las variables, esto es, si la variable es categorica y tenía tres posibles valores tenemos tres variables a partir de esta de forma que cada nueva variable toma valores de 0 o 1 donde 0 es si no tiene ese valor y 1 en caso de que si toma el valor.
+En estos momentos en _expandedDataFrame_ tenemos 25 variables, las 22 anteriores y las tres variables binarias creadas a partir de la variable _ring.number_. 
 
-Por suerte aquellas variables que no son categóricas son numéricas discretas con un conjunto reducido de valores de forma que se puede crear una variable por cada uno de los valores del dominio de la variable. 
-
-Por desgracia la salida de la función _expandDataFrame_ no da nombres significativos a todas las variables por lo que es conveniente cambiarles el valor a aquellas que no tienen nombre representativo o que el nombre se repite produciendo confusión.
-
-Por restricciones sobre el número de páginas la sección de código que modifica los nombres de las columnas no se muestra. Se recomienda abrir el fichero .Rmd para visualizarlo. 
-
-```{r,echo=FALSE}
-#str(expandedDataFrame) No todas las columnas tienen un nombre representativo
-
-namesExpanedDataFrame = names(expandedDataFrame)
-namesExpanedDataFrame[5] = "Block_of_affere"
-namesExpanedDataFrame[6] = "Bl_of_lymph_c"
-namesExpanedDataFrame[7] = "Bl_of_lymph_s"
-namesExpanedDataFrame[8] = "By_pas"
-namesExpanedDataFrame[9] = "Extravasates"
-namesExpanedDataFrame[10] = "Regeneration_of"
-namesExpanedDataFrame[11] = "Early_uptake_in"
-namesExpanedDataFrame[12] = "Lym_nodes_dimi=1"
-namesExpanedDataFrame[13] = "Lym_nodes_dimi=2"
-namesExpanedDataFrame[14] = "Lym_nodes_dimi=3"
-namesExpanedDataFrame[15] = "Lym_nodes_enlar=1"
-namesExpanedDataFrame[16] = "Lym_nodes_enlar=2"
-namesExpanedDataFrame[17] = "Lym_nodes_enlar=3"
-namesExpanedDataFrame[18] = "Lym_nodes_enlar=4"
-namesExpanedDataFrame[22] = "Defect_in_node=lac_central"
-namesExpanedDataFrame[23] = "Defect_in_node=lac_margin"
-namesExpanedDataFrame[24] = "Defect_in_node=lacunar"
-namesExpanedDataFrame[25] = "Defect_in_node=no"
-namesExpanedDataFrame[26] = "Changes_in_node=lac_central"
-namesExpanedDataFrame[27] = "Changes_in_node=lac_margin"
-namesExpanedDataFrame[28] = "Changes_in_node=lacunar"
-namesExpanedDataFrame[29] = "Changes_in_node=no"
-namesExpanedDataFrame[30] = "Changes_in_stru=coarsed"
-namesExpanedDataFrame[31] = "Changes_in_stru=diluted"
-namesExpanedDataFrame[32] = "Changes_in_stru=drop_like"
-namesExpanedDataFrame[33] = "Changes_in_stru=faint"
-namesExpanedDataFrame[34] = "Changes_in_stru=grainy"
-namesExpanedDataFrame[35] = "Changes_in_stru=no"
-namesExpanedDataFrame[36] = "Changes_in_stru=reticular"
-namesExpanedDataFrame[37] = "Changes_in_stru=stripped"
-namesExpanedDataFrame[41] = "Dislocation_of"
-namesExpanedDataFrame[42] = "Exclusion_of_no"
-namesExpanedDataFrame[43] = "No_of_nodes_in=1"
-namesExpanedDataFrame[44] = "No_of_nodes_in=2"
-namesExpanedDataFrame[45] = "No_of_nodes_in=3"
-namesExpanedDataFrame[46] = "No_of_nodes_in=4"
-namesExpanedDataFrame[47] = "No_of_nodes_in=5"
-namesExpanedDataFrame[48] = "No_of_nodes_in=6"
-namesExpanedDataFrame[49] = "No_of_nodes_in=7"
-namesExpanedDataFrame[50] = "No_of_nodes_in=8"
-namesExpanedDataFrame[54] = "Class=normal"
-colnames(expandedDataFrame) <- namesExpanedDataFrame
-```
+Por suerte todas las variables son categóricas, lo que nos facilita el preprocesamiento al no tener que dividir ningún dominio en intervalos.
 
 Ahora que ya tenemos el dataframe en un estado que nos favorece nos queda que cambiar la interpretación que le damos, para que sea del tipo transacción. Para ello cargamos el paquete _arules_ que nos permitirá hacer dicha transformación y además cargaremos el paquete de visualización de reglas de asociación _arulesViz_ que será útil en pasos posteriores.
 
-```{r}
+\newpage
+```{r, message=FALSE,warning=FALSE}
 require(arules)
 require(arulesViz)
 
@@ -156,74 +100,63 @@ transactionData <- as(expandedDataFrame, "transactions")
 summary(transactionData)
 ```
 
-Del resumen anterior obtenermos que los elementos más repetidos son _normal=0_, _Changes in stru=no=0_, _Changes in stru=reticular=0_, _Changes in no nodes=8=0_, _Class=normal=0_ lo que quiere decir que:
 
-* En la mayoría de las transacciones hay un tipo de linfático distinto del normal.
-* En la mayoría de las transacciones hay algún tipo de cambio en la estructura que no es de tipo reticular, convirtiendo este tipo en el más raro con solo dos casos.
-* El cambio en el número de nodos es en la mayoría de los casos distinto de 8.
-* Es raro el caso en el que el linfoma sea normal.
+Del resumen anterior obtenermos que los elementos más repetidos son _veil.type=p_, que se da para todas las observaciones de la base de datos, seguido por _n=0_ que es una de las variables generadas a partir de _ring.number_ de carácter binaria, por lo que se estima que sea más normal que las otras dos variables tomen valores, en concreto la variable _o_ dado que la variable _t_ aparece como item frecuente con el valor 0. A parte de estas tres variables tenemos como item frecuentes _veil.color_ con el valor _w_ y _gill.attachment_ con el valor _f_ 
 
-Además tenemos la información sobre la longitud máxima de la transacción que en este caso coincide con el número de variables. 
+Además obtenemos la información sobre la longitud máxima de la transacción que en todos los casos es 25, el número de variables, esto es debido a que no falta ninguna variable. 
 
+\newpage
 #Visualización de las transacciones
 
-Podemos visualizar las transacciones para ver su comportamiento:
+En el caso de que las variables tomasen solamente los valores _si_ o _no_ podríamos y que el número de variables en cada transacción fuese distinto podría ser interesante realizar una visualización de las transacciones. Pero dado que este no es el caso solamente visualizaremos los conjuntos de items más frecuentes, como en la siguiente imagen, donde miramos aquellos items que tienen un valor de soporte mayor que 0.9. 
 
-```{r,fig.align="center"}
-image(transactionData)
+```{r, fig.width=3, fig.align='center'}
+itemFrequencyPlot(transactionData, support = 0.9, cex.names=0.75)
 ```
 
-De la imagen anterior podemos deducir que las transacciones,
-
-Si nos interesa visualizar los items con mayor frecuencia tenemos que reducir los items por el soporte a aquellos que tienen dicho valor a .9 de otra forma la figura sería imposible visualizar algo.
+De la imagen anterior podemos deducir que aquellas reglas con las variables _gill.attachment=f_, _veil.type=p_, _veil.color=w_, _n=0_, _o=1_ y _t=0_ serán reglas que no aportarán información puesto que se cumplirán en almenos el 90% de los casos recogidos en la base de datos. 
 
 ```{r}
-itemFrequencyPlot(transactionData, support = 0.9, cex.names=0.8)
+itemFrequencyPlot(transactionData, support = 0.2, cex.names=0.6)
 ```
 
-El hecho de que la mayoría de los items mostrados tengan el valor, significa que la información interesante está en las otras variables que toman distintos valores. 
-
-Aún sabiendo que la imagen no mostrará correctamente los nombres de las variables vamos a visualizar los items que se convertirían en frecuentes si se baja el valor de soporte.
-
-```{r}
-itemFrequencyPlot(transactionData, support = 0.2, cex.names=0.8)
-```
-
-El gráfico anterior representa una población de aproximadamente 80 items que se convierten en frecuentes al determinar el umbral en 0.2. 80 items representa más de la mitad de las posibilidades que obtenemos de multiplicar las 54 variables por los 2 posibles valores que pueden tomar. 
+El gráfico anterior representa una población de aproximadamente 40 items que se convierten en frecuentes al determinar el umbral de soporte en 0.2 . 40 items representa una cantidad significativa de los valores que pueden tomar las variables de nuestra base de datos. Podemos dejar el soporte mínimo en 0.2, para tener un conjunto significativo de items con los que trabajar. 
 
 #Itemset frecuentes
 
-```{r}
-aPrioriTransactionData = apriori(transactionData, parameter = list(support = 0.1, target="frequent"))
+Para extraer los itemset frecuentes, utilizaremos el método _apriori_ que irá buscando para cada longitud de itemset aquellos itemsets que tengan un valor de soporte mayor que el que se ha determinado como mínimo, en nuestro caso 0.2. Tras ello lo ordenaremos por soporte y mostraremos una relación entre la longitud del itemset y la frecuencia absoluta de cada longitud. Siempre teniendo en cuenta que se nos van a devolver solamente los itemset de longitud menor o igual a 10. 
+
+```{r, warning=FALSE}
+aPrioriTransactionData = apriori(transactionData, parameter = list(support = 0.2, target="frequent"),control=list(verbose=F))
 aPrioriTransactionData = sort(aPrioriTransactionData, by="support")
 ```
 
 
 ```{r}
-size(aPrioriTransactionData)
 barplot(table(size(aPrioriTransactionData)), xlab="itemsetsize", ylab="count")
-inspect(aPrioriTransactionData[size(aPrioriTransactionData)==1])
 ```
 
-##Conjuntos maximales
+En la gráfica anterior podemos ver como aumenta el número de superconjuntos con la longitud del itemset, manteniéndose estos nuevos conjuntos como frecuentes siguiendo la propiedad antimonótona de los itemset que afirma que cualquier subconjunto de un itemset tiene mayor o igual soporte que el itemset del que proviene.
+
+Vamos a insperccionar el soporte de los itemsets de longitud 1 que hemos obtenido.
 
 ```{r}
-imaxAPrioriTransactionData<-aPrioriTransactionData[is.maximal(aPrioriTransactionData)]
-inspect(head(sort(imaxAPrioriTransactionData, by="support")))
+inspect(head(aPrioriTransactionData[size(aPrioriTransactionData)==1],10))
 ```
 
-##Conjuntos cerrados
+
+Los primeros 4 elementos tienen un soporte realmente alto, por lo que cualquier regla que se produzca con ellos puede no dar información relevante. 
+\newpage
+
+#Comparación del número de itemset frecuentes, conjuntos maximales y conjuntos cerrados
+Para conocer mejor los itemset obtenidos por el método _a priori_ realizaremos una comparativa de los conjuntos maximales, cerrados y frecuentes.
 
 ```{r}
 icloAPrioriTransactionData<-aPrioriTransactionData[is.closed(aPrioriTransactionData)]
-inspect(head(sort(icloAPrioriTransactionData, by="support")))
-```
-
-##Comparación del número de itemset frecuentes, conjuntos maximales y conjuntos cerrados
-
-```{r}
+imaxAPrioriTransactionData<-aPrioriTransactionData[is.maximal(aPrioriTransactionData)]
 barplot( c(frequent=length(aPrioriTransactionData), closed=length(aPrioriTransactionData), maximal=length(aPrioriTransactionData)), ylab="count", xlab="itemsets")
 ```
+
 
 ```{r}
 rules <-apriori(transactionData, parameter = list(support = 0.1, confidence = 0.8, minlen= 2))
