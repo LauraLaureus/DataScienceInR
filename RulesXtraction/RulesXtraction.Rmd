@@ -159,10 +159,13 @@ barplot( c(frequent=length(aPrioriTransactionData), closed=length(aPrioriTransac
 
 Al ver el número de itemset cerrados y maximales tan igual, podemos decir que los conjuntos son iguales, por lo que podemos presindir del conjunto de los maximales, dado que el conjunto de los itemset cerrados nos permite tener la lista de los más frecuentes y a la vez tener la información del soporte. 
 
+\newpage
 #Obtención de reglas
 
+Para la obtención de reglas usamos apriori y le indicamos que el soporte mínimo es de 0.2 como ya habíamos establecido antes. Además le indicamos que la confianza mínima de la regla es de 0.75, este valor lo establecemos así para tener mayor conjunto de reglas que estudiar aparte de las que van a tener un valor alto por contener aquellos items que tienen soporte muy próximo a 1. 
+
 ```{r}
-rules <-apriori(transactionData, parameter = list(support = 0.2, confidence = 0.8, minlen= 2))
+rules <-apriori(transactionData, parameter = list(support = 0.2, confidence = 0.75, minlen= 2),control=list(verbose=F))
 
 summary(rules)
 ```
