@@ -169,3 +169,30 @@ rules <-apriori(transactionData, parameter = list(support = 0.2, confidence = 0.
 
 summary(rules)
 ```
+
+Dado que el conjunto de reglas es muy amplio vamos a hacer una visualización de las primeras reglas:
+
+```{r}
+inspect(head(rules))
+```
+
+Como podemos ver, aparecen a la cabeza aquellas reglas que tienen un itemset con un soporte alto en el consecuente, por lo que da igual lo que se ponga en el antecedente, la regla tendrá una confianza alta. Este tipo de reglas las eliminamos con el siguiente código.
+
+\newpage
+```{r}
+rulesConfidenceInteresting<-subset(rules, subset =  confidence <= 0.9 )
+inspect(head(rulesConfidenceInteresting))
+```
+
+Para extraer información de valor vamos a focalizar el estudio de las reglas en unas pocas, para seleccionar las más interesantes lo primero que haremos es mostrar las reglas en una comparación entre su soporte y su confianza.
+
+```{r}
+plot(rulesConfidenceInteresting)
+```
+
+Aunque es tentador seleccionar aquellas reglas que tienen mayor soporte y confianza, situadas a la derecha en la gráfica, hay que tener el valor de lift que está próximo a 1, el valor 1 para lift significa independencia estadística por lo que los items que se relacionan en estos casos no tienen una relación de causalidad. Es por esto que hacemos otro refinamiento de las reglas obtenidas para dejar fuera este conjunto y nos quedamos con las reglas con lift mayor a 1.5.
+\newpage
+```{r}
+rulesInteresting <- subset(rulesConfidenceInteresting,subset =  lift > 1.5 )
+inspect(head(rulesInteresting))
+```
