@@ -206,8 +206,73 @@ Podemos servirnos de que tenemos tres variables que toman los valores "sí o no"
 interestingMeasure <- interestMeasure(rulesInteresting, measure = "confirmedConfidence", transactions = transactionData)
 quality(rulesInteresting) <- cbind(quality(rulesInteresting),interestingMeasure)
 inspect(head(sort(rulesInteresting, by="interestingMeasure")))
+sortRules <- sort(rulesInteresting, by="interestingMeasure")
 ```
 
-#Estudio de las reglas.
+\newpage
+#Estudio de las reglas por grupos.
+##Estudio de las setas comestibles
 
-Puesto que hemos determinado que el consecuente todas las reglas
+Puesto que hemos determinado que el consecuente todas las reglas solamente tenga un item por lo que podemos realizar una selección de las reglas por el consecuente. En el caso particular de la base de datos _mushrooms_ con la que estamos trabajando podemos tratar de resolver el problema de qué setas son comestibles y cuales no. 
+
+```{r}
+eatableMushrooms <- subset(sortRules,subset = rhs %in% "class=e")
+inspect(head(eatableMushrooms))
+```
+
+Si miramos el conjunto de las reglas vemos que todas ellas nos tienen el mismo valor para todas las medidas de interés, y todas las reglas comparten dos items en el antecedente la superficie encima del anillo con el valor suave ( _smooth_ en inglés) y el color del tallo debajo del anillo con el valor blanco. Estos dos valores tendrán un soporte muy alto para que se añada cualquier item y siga manteniendo el valor de soporte.  Por lo que se puede afirmar con un 0.799 de confianza confirmada de los casos las setas que tienen una superficie lisa por encima del anillo del tallo y el color del tallo por debajo del anillo sea blanca es comestible. 
+
+##Estudio de las setas venenosas
+
+Si el 20 por ciento de los casos que tienen la superficie encima del anillo con el valor suave ( _smooth_ en inglés) y el color del tallo debajo del anillo con el valor blanco la seta es venenosa podemos interesarnos en cuáles son las características que tienen las setas venenosas.
+
+```{r}
+poisinousMushrooms <- subset(sortRules,subset = rhs %in% "class=p")
+inspect(head(poisinousMushrooms))
+```
+
+Como en el estudio de las setas comestibles, en las reglas obtenidas podemos ver que en aquellas reglas que mantienen el mismo valor en las medidas de interés tienen un itemset común. 
+En las primeras dos reglas tienen en común los items de existencia de moretones, espacio pequeño entre branquias y la variable "número de anillo igual no" falso para determinar que la seta es venenosa, con una confianza confirmada del 0.79. 
+Las restantes 4 reglas tienen como denominador común la variable de el espacio entre agallas con el valor estrecho.
+
+##Estudio de la localización de las setas.
+
+Ahora que sabemos que características tienen las setas comestibles y las setas no comestibles, queremos saber en donde se encuentran cada una. 
+
+###Localización de las setas comestibles.
+
+```{r}
+locEatableMushrooms <- subset(sortRules,subset = lhs %in% "class=e"  & rhs %pin% "habitat=")
+inspect(head(locEatableMushrooms))
+```
+
+Las setas comestibles se encuentran en los bosques con una confianza confirmada del 0.8.
+
+###Localización de las setas venenosas
+```{r}
+locPMushrooms <- subset(sortRules,subset = lhs %in% "class=p" & rhs %pin% "habitat=")
+```
+
+No se puede determinar ningún habitat concreto para las setas venenosas puesto que ninguna regla tiene soporte suficiente.
+
+##Estudio de la población de las setas
+
+Otro factor que puede ayudar a determinar si una seta es venenosa o no, es si vive solitaria o si vive en población dentro del hábitat.
+
+```{r}
+popEMushrooms <- subset(sortRules,subset = lhs %in% "class=e" & rhs %pin% "population=")
+popPMushrooms <- subset(sortRules,subset = lhs %in% "class=p" & rhs %pin% "population=")
+
+#size(popEMushrooms) #Devuelve integer 0
+#size(popPMushrooms) #Distinto de 0
+
+```
+No podemos determinar que haya algún tipo población frecuente para las setas comestibles ya que no tienen ninguna regla frecuente.
+
+```{r}
+inspect(head(popPMushrooms))
+```
+
+Las reglas anteriores podemos afirmar con una confianza confirmada de 0.79 que las setas venenosas se encuentran juntas en conjuntos reducidos.
+
+#Conclusión.
