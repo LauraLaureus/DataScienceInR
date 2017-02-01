@@ -190,9 +190,24 @@ Para extraer información de valor vamos a focalizar el estudio de las reglas en
 plot(rulesConfidenceInteresting)
 ```
 
-Aunque es tentador seleccionar aquellas reglas que tienen mayor soporte y confianza, situadas a la derecha en la gráfica, hay que tener el valor de lift que está próximo a 1, el valor 1 para lift significa independencia estadística por lo que los items que se relacionan en estos casos no tienen una relación de causalidad. Es por esto que hacemos otro refinamiento de las reglas obtenidas para dejar fuera este conjunto y nos quedamos con las reglas con lift mayor a 1.5.
+Aunque es tentador seleccionar aquellas reglas que tienen mayor soporte y confianza, situadas a la derecha en la gráfica, hay que tener el valor de lift con el que se colorea la regla. En los casos que maximizan la confianza y el soporte tienen un valor de lift próximo a 1, este valor 1 significa independencia estadística por lo que los items que se relacionan en estos casos no tienen una relación de causalidad. Es por esto que hacemos otro refinamiento de las reglas obtenidas para dejar fuera este conjunto y nos quedamos con las reglas con lift mayor a 1.5.
 \newpage
 ```{r}
 rulesInteresting <- subset(rulesConfidenceInteresting,subset =  lift > 1.5 )
-inspect(head(rulesInteresting))
+plot(rulesInteresting)
 ```
+
+El gráfico anterior nos muestra que refinar la selección para evitar aquellas reglas que tienen independencia estadística nos ha supuesto quitar casi 30 000 reglas del estudio. 
+
+Podemos servirnos de que tenemos tres variables que toman los valores "sí o no" representados como 1 y 0 respectivamente para calcular otra métrica: _la confianza confirmada_. Esta métrica se define como la confianza de que dado X suceda Y menos el valor de que dado X suceda no-Y. 
+
+
+```{r}
+interestingMeasure <- interestMeasure(rulesInteresting, measure = "confirmedConfidence", transactions = transactionData)
+quality(rulesInteresting) <- cbind(quality(rulesInteresting),interestingMeasure)
+inspect(head(sort(rulesInteresting, by="interestingMeasure")))
+```
+
+#Estudio de las reglas.
+
+Puesto que hemos determinado que el consecuente todas las reglas
