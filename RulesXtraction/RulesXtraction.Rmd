@@ -222,6 +222,7 @@ inspect(head(eatableMushrooms))
 
 Si miramos el conjunto de las reglas vemos que todas ellas nos tienen el mismo valor para todas las medidas de interés, y todas las reglas comparten dos items en el antecedente la superficie encima del anillo con el valor suave ( _smooth_ en inglés) y el color del tallo debajo del anillo con el valor blanco. Estos dos valores tendrán un soporte muy alto para que se añada cualquier item y siga manteniendo el valor de soporte.  Por lo que se puede afirmar con un 0.799 de confianza confirmada de los casos las setas que tienen una superficie lisa por encima del anillo del tallo y el color del tallo por debajo del anillo sea blanca es comestible. 
 
+\newpage
 ##Estudio de las setas venenosas
 
 Si el 20 por ciento de los casos que tienen la superficie encima del anillo con el valor suave ( _smooth_ en inglés) y el color del tallo debajo del anillo con el valor blanco la seta es venenosa podemos interesarnos en cuáles son las características que tienen las setas venenosas.
@@ -275,4 +276,16 @@ inspect(head(popPMushrooms))
 
 Las reglas anteriores podemos afirmar con una confianza confirmada de 0.79 que las setas venenosas se encuentran juntas en conjuntos reducidos.
 
-#Conclusión.
+#Conclusión
+
+En este trabajo se ha examinado la base de datos de _mushrooms_ en la que hemos revisado los itemset más frecuentes, los itemset cerrados y los maximales para saber que reglas eran a priori superfluas y no aportaban información. 
+
+Tras ello obtuvimos las reglas mediante el método a priori y descartamos aquellas que eran potencialmente superfluas y aquellas que son estadísticamente independientes. 
+
+Con el conjunto resultante se hizo un análisis por grupos de reglas en el que nos interesamos por como se puede definir las setas comestibles y las venenosas, donde se sitúan las mismas y en que tipo de poblaciones se suelen encontrar obteniendo las siguientes conclusiones:
+* Las setas comestibles se definen por la superficie encima del anillo con el valor suave y el color del tallo debajo del anillo con el valor blanco.
+* Las setas venenosas se definen o bien por existencia de moretones, espacio pequeño entre branquias y la variable "número de anillo igual no" falso o bien por el espacio entre agallas con el valor estrecho.
+* Las setas comestibles se encuentran sobretodo en bosques.
+* Las setas venenosas no se puede definir un hábitad frecuente.
+* Las setas comestibles no tienen un tipo de población definida.
+* Las setas venenosas se suelen agurpar en grupos pequeños.
