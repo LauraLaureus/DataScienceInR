@@ -106,7 +106,7 @@ Del resumen anterior obtenermos que los elementos más repetidos son _veil.type=
 Además obtenemos la información sobre la longitud máxima de la transacción que en todos los casos es 25, el número de variables, esto es debido a que no falta ninguna variable. 
 
 \newpage
-#Visualización de las transacciones
+#Visualización
 
 En el caso de que las variables tomasen solamente los valores _si_ o _no_ podríamos y que el número de variables en cada transacción fuese distinto podría ser interesante realizar una visualización de las transacciones. Pero dado que este no es el caso solamente visualizaremos los conjuntos de items más frecuentes, como en la siguiente imagen, donde miramos aquellos items que tienen un valor de soporte mayor que 0.9. 
 
@@ -211,7 +211,8 @@ sortRules <- sort(rulesInteresting, by="interestingMeasure")
 
 \newpage
 #Estudio de las reglas por grupos.
-##Estudio de las setas comestibles
+##Estudio de los tipos de seta
+###Estudio de las setas comestibles
 
 Puesto que hemos determinado que el consecuente todas las reglas solamente tenga un item por lo que podemos realizar una selección de las reglas por el consecuente. En el caso particular de la base de datos _mushrooms_ con la que estamos trabajando podemos tratar de resolver el problema de qué setas son comestibles y cuales no. 
 
@@ -223,7 +224,7 @@ inspect(head(eatableMushrooms))
 Si miramos el conjunto de las reglas vemos que todas ellas nos tienen el mismo valor para todas las medidas de interés, y todas las reglas comparten dos items en el antecedente la superficie encima del anillo con el valor suave ( _smooth_ en inglés) y el color del tallo debajo del anillo con el valor blanco. Estos dos valores tendrán un soporte muy alto para que se añada cualquier item y siga manteniendo el valor de soporte.  Por lo que se puede afirmar con un 0.799 de confianza confirmada de los casos las setas que tienen una superficie lisa por encima del anillo del tallo y el color del tallo por debajo del anillo sea blanca es comestible. 
 
 \newpage
-##Estudio de las setas venenosas
+###Estudio de las setas venenosas
 
 Si el 20 por ciento de los casos que tienen la superficie encima del anillo con el valor suave ( _smooth_ en inglés) y el color del tallo debajo del anillo con el valor blanco la seta es venenosa podemos interesarnos en cuáles son las características que tienen las setas venenosas.
 
@@ -248,6 +249,7 @@ inspect(head(locEatableMushrooms))
 ```
 
 Las setas comestibles se encuentran en los bosques con una confianza confirmada del 0.8.
+
 
 ###Localización de las setas venenosas
 ```{r}
