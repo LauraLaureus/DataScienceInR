@@ -418,6 +418,164 @@ A continuación se muestran tres perspectivas de la nube de puntos resultantes d
 ![Planta de la nube de puntos](./Planta de la nube de puntos.png)
 
 Mirando el gráfico parece que el número de anomalías es igual al de los datos normales, pero si volvemos a la cuenta de cada tipo de datos vemos que efectivamente los outliers están en minoría, lo que significa que varios registros tienen el mismo valor para las tres componentes y se superponen en el gráfico. 
+\newpage
+##Detección de anomalías basado en densidad.
 
-##Detección de anomalías basandose en clustering
+Los métodos basados en densidad calculan una puntuación para cada punto basándose en la distancia del punto a un número definido de vecinos. Si esta puntuación es lo suficientemente alta entonces se declara el punto como anómalo. El algoritmo que vamos a utilizar en este campo es LOF. 
 
+Para que LOF se ejecute sin problemas hay que normalizar los datos, aprovechamos para seleccionar aquellas columnas con datos de tipo real.
+```{r}
+datosNormalizados = scale(datos[,c(1,6,7)])
+```
+
+LOF es además un método basado en el número de vecinos de un punto por lo que tenemos que determinar el número de vecinos a utilizar. Dado que en la literatura el valor más utilizado es 5, vamos a emplear este número.
+
+```{r}
+vecinos = 5
+```
+
+LOF usa puntuación para simbolizar la distancia, a mayor puntuación, más puede ser un outlier. 
+
+```{r}
+puntuación = lofactor(datosNormalizados, k= vecinos)
+puntuaciónOrdenada = sort(puntuación,decreasing = TRUE)
+head(puntuaciónOrdenada)
+```
+
+Al ver que parte de los puntos tienen un valor infinito, seleccionamos todos aquellos con este valor como outliers.
+
+```{r}
+numOutliers = sum(puntuaciónOrdenada == Inf)  #output: 610
+indicesOutliersLOF = rownames(datos) %in% order(puntuación,decreasing = T)[1:numOutliers]
+```
+
+Para representarel resultado volvemos a apoyarnos en _plot3d_
+
+```{r}
+plot3d(x=datos[,1],y=datos[,6], z=datos[,7], colvar =indicesOutliersLOF, col= c("black","red"), xlab = "Número de personas", ylab="Temperatura aparente", zlab="Temperatura") 
+```
+
+![Resultado obtenido por LOF](./LOF.png)
+
+Como se puede ver en la imagen anterior, el resultado no varía mucho con respecto a lo obtenido con los métodos estadísticos multivariante. Lo que si hay que destacar es que LOF ha obtenetido un número mayor de anomalías(610) con respecto al método anterior (405). Esto puede ser debido a una mala elección del número de vecinos o que el método LOF pone como anómalos más valores que los demás.  
+
+##Detección de anomalías basada en agrupamiento
+
+Los algoritmos basados en agrupamiento, generan un conjunto finito de clases o grupos a los que un punto puede pertenecer. En una segunda fase se recorre toda la lista de punto y si un punto no pertenece a ninguna clase éste se declara como anómalo. Una de las problemáticas de este tipo de algoritmos es que hay que determinar el número de conjuntos a priori y puede no ser preciso para casos en los que se desconoce el número de grupos como es este caso. En esta línea el método que vamos a ejecutar es el de las K-medias. 
+Como se menciona anteriormente hay que establecer un número de conjuntos a priori, en este caso como no tenemos información  sobre grupos que se puedan formar vamos a tomar la libertad de separarlos en 4 grupos, dado que dos variables representan la temperatura estos 4 grupos podrían ser perfectamente las 4 estaciones del año. 
+
+Lo primero que haremos es crear el modelo de las k-medias.
+```{r}
+modeloKmedias = kmeans(datosNormalizados, centers = 4)
+indicesKmedias = modeloKmedias$cluster
+centroidesKmedias = modeloKmedias$centers
+```
+
+Para comprobar que nuestra teoría es cierta miramos el número de instancias que tiene cada grupo
+```{r}
+estaciones = c(sum(indicesKmedias == 1), sum(indicesKmedias == 2),sum(indicesKmedias == 3),sum(indicesKmedias == 4))
+estaciones
+```
+
+Podríamos decir que tenemos más instancias de una estación o que la universidad donde se toman los datos está en una zona más calida por lo que los datos que suponemos de verano son mayores. 
+
+Ahora vamos a calcular las distancias de cada punto a su centroide. 
+
+```{r}
+distancias_a_centroides = function (datos.normalizados, 
+                                    indices.asignacion.clustering, 
+                                    datos.centroides.normalizados){
+  
+  sqrt(rowSums(   (datos.normalizados - datos.centroides.normalizados[indices.asignacion.clustering,])^2   ))
+}
+
+
+distanciaCentroides = distancias_a_centroides (datosNormalizados, 
+                                                indicesKmedias, 
+                                                centroidesKmedias)
+head(sort(distanciaCentroides,decreasing = T))
+tail(sort(distanciaCentroides,decreasing = T))
+```
+
+La diferencia entre el mayor valor y el menor valor es cosiderable, para establecer el umbral en el que un punto se convierte en outlier hacemos la media entre la máxima distancia y la mínima.
+
+```{r}
+umbral = (head(sort(distanciaCentroides,decreasing = T))[1] - tail(sort(distanciaCentroides,decreasing = T))[6])/2
+
+totalOutliers = sum(distanciaCentroides > umbral)
+totalOutliers
+```
+
+Este número de outliers está entre el número obtenido por el método estadístico multivariante basado en Mahalanobis y el número de outliers obtenido por LOF, así que no vamos por mal camino. 
+
+Para obtener los índices de estos outliers creamos la función top-k outliers
+```{r}
+top_clustering_outliers = function(datos.normalizados, 
+                                   indices.asignacion.clustering, 
+                                   datos.centroides.normalizados, 
+                                   numero.de.outliers){
+  
+  dist_centroides = distancias_a_centroides (datos.normalizados, 
+                                             indices.asignacion.clustering, 
+                                             datos.centroides.normalizados)
+  
+  indices = order(dist_centroides, decreasing=T)[1:numero.de.outliers]
+  
+  list(distancias = dist_centroides[indices]  , indices = indices)
+}
+topOutliersKmedias = top_clustering_outliers(datosNormalizados,indicesKmedias,centroidesKmedias,totalOutliers)
+```
+
+Si dibujamos el resultado obtenemos lo siguiente:
+```{r}
+plot3d(x=datos[,1],y=datos[,6], z=datos[,7], colvar =topOutliersKmedias$indices, col= c("black","red"), xlab = "Número de personas", ylab="Temperatura aparente", zlab="Temperatura") 
+```
+
+![Detección de anomalías con el método de las Kmedias](./Kmedias.png)
+
+#Conclusiones
+
+##Las anomalías seguras 
+Dado que todos los métodos dan una gráfica similar vamos a tomar aquellos outliers seguros aquellos que aparecen en todos los conjuntos como las anomalías, para después analizar algunos de los outliers para comprobar que si que tienen significado.
+
+Primero que todo traducimos los índicies del método de las Kmedias a un vector lógico
+```{r}
+logicalKmediasIndexes = 1:26066 %in% topOutliersKmedias$indices
+outliersintersection = moutlier$outliers & indicesOutliersLOF & logicalKmediasIndexes
+sum(outliersintersection)
+```
+
+Lástimosamente no coinciden en ningún outlier, por lo que no podemos tener ningún valor que sea un outlier seguro. Así que miraremos los primeros casos de cada uno de los métodos.
+
+##Las anomalías de Multivariante con la distancia Mahalanobis
+
+```{r}
+head(datos[moutlier$outliers,])
+```
+
+Las anomalías vistas en este subconjunto se puede interpretar como que es anómalo que haciendo 8ºC (48ºF) no haya nadie o menos de 20 personas en el gimnasio.
+
+##Las anomalías de LOF
+
+```{r}
+head(datos[indicesOutliersLOF,])
+```
+
+Este subconjunto de las anomalías detectadas por el algoritmo LOF determinan que es anómalo que con 16ºC haya o 25 personas, 1 o ninguna. Podría ampliar el análisis diciendo un sábado pero es que el modelo no se contemplan las variables día de la semana, ni es fin de semana ni la que indica que es un día de vacaciones, pero en caso de incluirse a un ser humano le parecería lógico que los sábado hay menos gente y más en las horas que se registran estos datos(timestamp=25211s=7.00h). Lo que sí me resulta una anomalía que haya 25 personas un sábado a las 9 de la mañana (timestamp = 35111s = 9.75h)
+
+##Las anomalías de las K-medias
+
+```{r}
+head(datos[logicalKmediasIndexes,])
+```
+
+Este subconjunto se puede interpretar como que se considera una anomalía que haya entre 25 y 40 personas en el gimnasio un sábado cerca de las 12 del mediodía cuando hay 24 grados. Como ser humano no le veo la anomalía a este fragmento del conjunto de datos.
+
+##Conclusiones
+
+Los métodos multivariantes han presentado un mayor número de anomalías que los métodos gráficos y estadísticos uni-variantes.
+
+
+A la vista de los resultados de los fragmentos de outliers obtenidos por los métodos multivariantes, el que mejor se puede interpretar como anomalía es conjunto obtenido por el algoritmo LOF. 
+
+Posiblemente los algoritmos hubiesen tenido una mejor tasa de acierto si se hubiese realizado el mismo estudio sobre un espacio dividido por días de la semana, vacaciones y fracciones del día, pero el número de conjuntos se hubiese hecho demasiado grande para ser estudiado. 
