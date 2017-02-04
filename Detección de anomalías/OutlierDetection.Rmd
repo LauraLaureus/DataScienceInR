@@ -89,11 +89,11 @@ MiPlot_Univariate_Outliers = function (datos, indices_de_Outliers, titulo){
   vector.colores.outlier = rep("black", numero.de.datos)
   vector.colores.outlier [vectorTFoutliers] = "red"
   
-  cat("\nN?mero de datos: ")
-  cat(numero.de.datos)
-  cat("\n?Qui?n es outlier?: ")
-  cat(vectorTFoutliers)
-  cat('\n')
+  #cat("\nN?mero de datos: ")
+  #cat(numero.de.datos)
+  #cat("\n?Qui?n es outlier?: ")
+  #cat(vectorTFoutliers)
+  #cat('\n')
   
   x11()
   plot(datos, col=vector.colores.outlier, main = titulo)
@@ -297,8 +297,46 @@ MiBiPlot_Clustering_Outliers = function (datos, titulo){
 
 ##Detección de anomalías univariante
 
-Como primera aproximación a la detección de anomalías, vamos a estudiar cada una de las variables para saber si contienen valores anómalos. Para ello utilizaremos el test de la distancia intercuartil (IQR)
+Como primera aproximación a la detección de anomalías, vamos a estudiar cada una de las variables para saber si contienen valores anómalos. Para ello utilizaremos el test de la distancia intercuartil (IQR).
+
+La distancia intercuartil la calculamos como la resta del primer cuartil al primero.
 
 ```{r}
-MiBoxPlot_IQR_Univariate_Outliers(datos,(dim(datos)[2]))
+vectorIQR = apply(datos,2,function(x){iqr = quantile(x,0.75) - quantile(x,0.25)})
+vectorQuantiles = apply(datos,2,function(x){quantile(x,.25)})
+vectorQuantiles = rbind(vectorQuantiles,apply(datos,2,function(x){quantile(x,.75)}))
+vectorIQR = rbind(vectorIQR,vectorQuantiles)
 ```
+
+En este momento en el vectorIQR tenemos en la primera línea la distancia intercuartil y en las dos siguientes filas el primer y el tercer cuartil. Con esta información podemos determinar  si son outliers y si son extremos outliers. 
+
+```{r}
+outlierMatrix = matrix(data=FALSE,nrow=(dim(datos)[1]),ncol = (dim(datos)[2]))
+for(i in 1:(dim(datos)[1])){
+  for(j in 1:(dim(datos)[2])){
+    outlierMatrix[i,j] = datos[i,j] > vectorIQR[1,j]*1.5 + vectorIQR[3,j] | datos[i,j] <   vectorIQR[2,j] - vectorIQR[1,j]*1.5
+  }
+}
+```
+En este momento tenemos en _outlierMatrix_ todos aquellas posiciones que son outliers normales, es decir que están a más de 1,5*distancia intercuartil de los cuartiles primero y tercero. 
+
+Pero lo cierto es que este método no es aplicable a todas las variables, un ejemplo de ello es la variable _timestamp_, _dayOfWeek_, _isWeekend_, _isHoliday_ o _isStartOfSemester_ que solo tiene valor descriptivo. Por ello tenemos que eliminar todos aquellos datos que nos sobran y que hemos calculado por limpieza de código. 
+
+```{r}
+outlierMatrix[,c(2,3,4,5,8)] = NA
+```
+
+Los outlier calculados se muestran a continuación:
+
+```{r,message=FALSE,warning=FALSE,comment=FALSE,error=FALSE}
+MiPlot_Univariate_Outliers(datos[,1],which(outlierMatrix[,1]==TRUE),"Number of people")
+MiPlot_Univariate_Outliers(datos[,6],which(outlierMatrix[,6]==TRUE),"Apparent Temperature")
+MiPlot_Univariate_Outliers(datos[,7],which(outlierMatrix[,7]==TRUE),"Temperature")
+```
+
+![Detección de anomalías sobre el número de personas](./numberOfPeople.png)
+![Detección de anomalías sobre la temperatura aparente](./TemperaturaAparente.png)
+![Detección de anomalías sobre la temperatura](./Temperature.png)
+
+En las gráficas de las variables _apparent temperature_ y _temperature_ podemos ver como se determinan como outliers valores que están perfetamente cohesionados con los valores de alrededor. Por este motivo la detección de outlier mediante el método de IQR no lo considero ideal. 
+Sin embargo en la primera gráfica, correpondiente a la variable _number of people_ , si me interesan unos valores que no están del todo cohesionados. Lo mantenemos en mente, porque nos puede servir para un test de Grubb o para uno de grosner.
