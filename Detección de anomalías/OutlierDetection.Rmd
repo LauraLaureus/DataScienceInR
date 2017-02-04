@@ -246,7 +246,7 @@ MiPlot_resultados_TestRosner = function(datos){
 ```{r}
 MiBiplot = function(datos){
   PCA.model = princomp(scale(datos))
-  biplot = ggbiplot(PCA.model, obs.scale = 1, var.scale=1 , varname.size = 5,alpha = 1/2) 
+  biplot = ggbiplot(PCA.model, obs.scale = 1, var.scale=1 , varname.size = 5) 
   x11()
   print(biplot)
 }
@@ -258,7 +258,7 @@ MiBiPlot_Multivariate_Outliers = function (datos, vectorTFoutliers, titulo){
  
    PCA.model = princomp(scale(datos))
    outlier.shapes = c(".","x") #c(21,8)
-   biplot = ggbiplot(PCA.model, obs.scale = 1, var.scale=1 , varname.size = 5,groups =  vectorTFoutliers, alpha = 1/2) #alpha = 1/10, 
+   biplot = ggbiplot(PCA.model, obs.scale = 1, var.scale=1 , varname.size = 5,groups =  vectorTFoutliers) #alpha = 1/10, 
    biplot = biplot + labs(color = "Outliers")
    biplot = biplot + scale_color_manual(values = c("black","red"))
    biplot = biplot + geom_text(label = identificadores_de_datos, stat = "identity", size = 3, hjust=0, vjust=0)
@@ -295,7 +295,7 @@ MiBiPlot_Clustering_Outliers = function (datos, titulo){
 
 \newpage
 
-##Detección de anomalías univariante
+##Detección de anomalías univariante por método gráfico
 
 Como primera aproximación a la detección de anomalías, vamos a estudiar cada una de las variables para saber si contienen valores anómalos. Para ello utilizaremos el test de la distancia intercuartil (IQR).
 
@@ -339,4 +339,85 @@ MiPlot_Univariate_Outliers(datos[,7],which(outlierMatrix[,7]==TRUE),"Temperature
 ![Detección de anomalías sobre la temperatura](./Temperature.png)
 
 En las gráficas de las variables _apparent temperature_ y _temperature_ podemos ver como se determinan como outliers valores que están perfetamente cohesionados con los valores de alrededor. Por este motivo la detección de outlier mediante el método de IQR no lo considero ideal. 
-Sin embargo en la primera gráfica, correpondiente a la variable _number of people_ , si me interesan unos valores que no están del todo cohesionados. Lo mantenemos en mente, porque nos puede servir para un test de Grubb o para uno de grosner.
+Sin embargo en la primera gráfica, correpondiente a la variable _number of people_ , si me interesan unos valores que no están del todo cohesionados. Lo mantenemos en mente, porque nos puede servir para un test de Grubb o para uno de Rosner.
+
+##Detección de anomalías en variables univariantes mediante métodos estadísticos
+
+Como ya vimos en el apartado anterior es posible que en la variable _number of people_ haya outliers. Para confirmarlo vamos a realizar dos test estadísticos: el test de Grubb que detecta si hay un outlier y el test de Rosner que detecta si hay exactamente k outliers.
+
+###Test de Grubb
+
+El test de Grubb se realiza con la llama _grubbs.test_ del paquete _outliers_ que cargamos anteriormente. Si el test sale afirmativo veremos en pantalla el valor del índice en el que se encuentra y el valor que toma. Tras ello lo mostraremos para ver si se corresponde gráficamente con un outlier.
+
+```{r}
+testGrubb = grubbs.test(datos[,1], two.sided = TRUE)
+
+if(testGrubb$p.value < 0.025){
+  index = order(abs(datos[,1] - mean(datos[,1])), decreasing = T)[1]
+  value = datos[index,1]
+}
+index
+value
+
+MiPlot_Univariate_Outliers(datos[,1],index,"Outlier")
+```
+
+![Resultado test de Grubb](./grubb.png)
+
+El valor señalado con el test de Grubb se corresponde con un valor que graficamente determinaríamos como outlier. 
+
+
+
+###Test de Rosner
+
+Del gráfico podríamos pensar que no solo ese valor podría ser un outlier, sino también otros situados por encima de la montaña de puntos situada a la derecha. Para determinar si eso es así utilizamos el test de Rosner.
+
+```{r}
+testRosner = rosnerTest(datos[,1],k=10)
+isRosnerOutlier = testRosner$all.stats$Outlier
+kMayoresDesviacionesMedia = testRosner$all.stats$Obs.Num
+indexesOutliers = kMayoresDesviacionesMedia[isRosnerOutlier]
+indexesOutliers
+```
+
+Según Rosner no hay ningún outlier. 
+
+\newpage
+##Detección de anomalías multivariante
+
+Puede que no haya ningún outlier de forma univariante pero puede ser que si miramos los datos con más de una variable si nos encontremos con outliers. Para detectar este tipo de anomalías nos basaremos en las funciones del paquete _mvoutlier_ . Este paquete por defecto usa la distancia Mahalanobis para detectar si el dato es outlier o no. 
+
+Lo primero que tenemos que hacer es determinar el grado de confianza al que queremos trabajar. 
+```{r}
+alpha = 0.05
+alphaPenalizado = 1- (1 - alpha) ^ (1/nrow(datos))
+```
+
+Tras ello obtendremos un gráfico del tipo _uni.plot_ que nos devolverá los índices de aquellos datos que son outliers.
+
+```{r}
+moutlier = uni.plot(datos[,c(1,6,7)],symb=FALSE,alpha = alphaPenalizado)
+```
+
+Con este gráfico podemos comprobar que sí que existen outliers al combinar las tress variables de dominio real. Si queremos realizar un estudio de qué variables son las que más influyen en la designación de los outliers utilizaremos un plot en tres dimensiones, dado que se puede representar perfectamente en tres dimensiones no es necesario realizar una reducción de dimensiones mediante el algoritmo PCA.
+
+```{r}
+cat("Valores outliers")
+sum(moutlier$outliers == TRUE)
+cat("Valores normales")
+sum(moutlier$outliers == FALSE)
+plotData = cbind(datos,moutlier$outliers)
+plot3d(x=plotData[,1],y=plotData[,6], z=plotData[,7], colvar =moutlier$outliers, col= c("black","red"), xlab = "Número de personas", ylab="Temperatura aparente", zlab="Temperatura") 
+legend3d("topright", c("Valores normales", "Anomalías"), col= c("black","red"), pch=16)
+```
+
+A continuación se muestran tres perspectivas de la nube de puntos resultantes de la llamada a  _plot3d_.
+
+![Alzado de la nube de puntos](./Alzado de la nube de puntos.png)
+![Perfil de la nube de puntos](./Perfil de la nube de puntos.png)
+![Planta de la nube de puntos](./Planta de la nube de puntos.png)
+
+Mirando el gráfico parece que el número de anomalías es igual al de los datos normales, pero si volvemos a la cuenta de cada tipo de datos vemos que efectivamente los outliers están en minoría, lo que significa que varios registros tienen el mismo valor para las tres componentes y se superponen en el gráfico. 
+
+##Detección de anomalías basandose en clustering
+
