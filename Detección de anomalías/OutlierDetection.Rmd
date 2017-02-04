@@ -1,0 +1,45 @@
+---
+title: "Detección de anomalías"
+author: "Laura del Pino Díaz"
+date: "4/2/2017"
+header-includes: \usepackage[spanish]{babel}
+output: pdf_document
+toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(width=60)
+knitr::opts_chunk$set(comment = "", warning = FALSE, message = FALSE, echo = TRUE, tidy = TRUE, size="small")
+```
+\newpage
+#Personas en el gimnasio del campus
+
+La base de datos que vamos a usar es _Crowdeness at campus gym_ que traducido al español es la población que hay dentro de un gimnasio universitario. 
+
+Los atributos que tenemos son los siguientes:
+
+* timestamp  (entero): el número de segundos desde el comienzo del día. 
+* day_of_week (entero): día de la semana del 0 al 6.
+* is_weekend (entero): si el día pertenece a un fin de semana. 
+* is_holyday (entero): si el día es un día de vacaciones.
+* apparent_temperature(real): temperatura aparente en el momento en el que se realiza la observación, en grados Farenheit.
+* temperature (real): temperatura medida.
+* is_start_of_semester (entero): indica si es el comienzo del semestre. 
+
+Como salida se tiene el siguiente atributo:
+* Number_of_people (entero)
+
+El objetivo sobre esta base de datos es detectar si existen anomalías en el número de personas que están en el gimnasio.
+
+Base de datos obtenida de [Kaggle](https://www.kaggle.com/nsrose7224/crowdedness-at-the-campus-gym) 
+
+\newpage
+#Detección de anomalías
+
+##Paquetes necesarios 
+
+Son varios los paquetes de detección de anomalías que podemos encontrar disponibles para R, pero los que vamos a utilizar se listan a continuación. 
+```{r}
+
+```
