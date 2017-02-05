@@ -198,3 +198,60 @@ gmean.ROS
 
 Al igual que en el caso anterior, la gmean ha mejorado al mejorar el balance de la clase minoritaria. 
 
+#Random Undersampling (RUS)
+
+La técnica de _Random Undersampling_ equilibra las dos clases mediante el borrado aleatorio de registros de la clase mayoritaria. Aplicaremos esta técnica a ambos conjuntos de datos y compararemos la gmean resultante con la obtenida en los dos apartados anteriores.
+
+```{r}
+knn.pred = NULL
+for( i in 1:5){
+  
+  train <- subclus[-SubclussCVperm[,i], -3]
+  classes.train <- subclus[-SubclussCVperm[,i], 3] 
+  test  <- subclus[SubclussCVperm[,i], -3]
+  
+  # randomly undersample the minority class (class 1)
+  majority.indices <- (1:dim(train)[1])[classes.train == 1]
+  to.remove <- 2* length(majority.indices) - dim(train)[1]
+  remove <- sample(majority.indices, to.remove, replace = F)
+  train <- train[-remove,] 
+  classes.train <- classes.train[-remove]
+  
+  # use the modified training set to make predictions
+  predictions <-  knn(train, test, classes.train, k = 3)
+  knn.pred <- c(knn.pred, predictions)
+}
+tpr.RUS <- sum(subclus$Class[as.vector(SubclussCVperm)] == 0 & knn.pred == 1) / sum(subclus$Class == 0)
+tnr.RUS <- sum(subclus$Class[as.vector(SubclussCVperm)] == 1 & knn.pred == 2) / sum(subclus$Class == 1)
+gmean.RUS <- sqrt(tpr.RUS * tnr.RUS)
+gmean.RUS
+```
+
+Se ha obtenido un valor de gmean situado entre el obtenido en el clasificador de control y el de ROS, esto es debido a que al eliminar registros de la clase mayoritaria para igualar el número de observaciones de ambas clases ha perdido información sobre la clase mayoritaria. 
+
+```{r}
+knn.pred = NULL
+for( i in 1:5){
+  
+  train <- circle[-circleCVperm[,i], -3]
+  classes.train <- circle[-circleCVperm[,i], 3] 
+  test  <- circle[circleCVperm[,i], -3]
+  
+  # randomly undersample the minority class (class 1)
+  majority.indices <- (1:dim(train)[1])[classes.train == 1]
+  to.remove <- 2* length(majority.indices) - dim(train)[1]
+  remove <- sample(majority.indices, to.remove, replace = F)
+  train <- train[-remove,] 
+  classes.train <- classes.train[-remove]
+  
+  # use the modified training set to make predictions
+  predictions <-  knn(train, test, classes.train, k = 3)
+  knn.pred <- c(knn.pred, predictions)
+}
+tpr.RUS <- sum(circle$Class[as.vector(circleCVperm)] == 0 & knn.pred == 1) / sum(circle$Class == 0)
+tnr.RUS <- sum(circle$Class[as.vector(circleCVperm)] == 1 & knn.pred == 2) / sum(circle$Class == 1)
+gmean.RUS <- sqrt(tpr.RUS * tnr.RUS)
+gmean.RUS
+```
+
+En este caso ha bajado ligeramente el valor de la gmean por el mismo motivo que en el caso anterior, porque pierde parte de la información de la clase mayoritaria, pero como en esta basa de datos los datos no están solapados esta diferencia no se nota demasiado. 
