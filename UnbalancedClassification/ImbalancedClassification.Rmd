@@ -255,3 +255,133 @@ gmean.RUS
 ```
 
 En este caso ha bajado ligeramente el valor de la gmean por el mismo motivo que en el caso anterior, porque pierde parte de la información de la clase mayoritaria, pero como en esta basa de datos los datos no están solapados esta diferencia no se nota demasiado. 
+
+#Synthetic Minority Oversampling Technique (SMOTE)
+
+La técnica de Synthetic Minority Oversampling aumenta el número de registros de la clase minoritaria creando observaciones entre los puntos ya existentes de la clase minoritaria. 
+
+El primer paso en el desarrollo de esta técnica es definir la distancia entre los puntos. Para ello tomamos la distancia euclídea entre los atributos numéricos, y para los atributos categóricos tomamos como distancia 1 siempre que no tengan la misma categoría. 
+
+```{r}
+distance <- function(i, j, data){
+  sum <- 0
+  for(f in 1:dim(data)[2]){
+    if(is.factor(data[,f])){ # nominal feature
+      if(data[i,f] != data[j,f]){
+        sum <- sum + 1
+      }
+    } else {
+      sum <- sum + (data[i,f] - data[j,f]) * (data[i,f] - data[j,f])
+    }
+  }
+  sum <- sqrt(sum)
+  return(sum)
+}
+```
+
+Una vez tenemos la función de distancia, tenemos que seleccionar aquellos puntos que nos ayudarán a crear los nuevos ejemplos, es decir los vecinos al punto que estamos considerando. 
+
+```{r}
+getNeighbours = function(x,minorityIndices,train){
+  minority = train[minorityIndices,]
+  distances = NULL
+  for(i in 1:(dim(minority)[1])){
+    distances = c(distances, distance(x,rownames(minority[i,]),train))
+  }
+  indexInMinority = which(distances %in% sort(distances)[1:5])
+  return(minority[indexInMinority,])
+}
+
+#llamada de prueba
+getNeigbours(SubclussCVperm_pos[1,1],SubclussCVperm_pos[,2],subclus)
+```
+
+Con la selección de los vecinos más cercanos podemos crear nuevas instacias entre ellos.
+```{r}
+syntheticInstance = function(x,nearestNeighbours){
+  chosenNeighbourIndex = round(runif(1)*5)+1
+  chosenNeighbour = nearestNeighbours[chosenNeighbourIndex,]
+  result =  NULL
+  for(i in 1:length(x)){
+    if(is.factor(x[i])){
+      result = c(result, ifelse(runif(1) > 0.5, x[i],chosenNeighbour[i]))
+    }
+    else{
+      increment = abs(x[i]-chosenNeighbour[i])*runif(1)
+      minimum = min(x[i],as.numeric(chosenNeighbour[i]))
+      result = c(result,minimum+increment)
+    }
+  }
+  return(result)
+}
+
+#Nota mental: habrá que elegir un único valor aleatorio para todos los atributos(?)
+si = syntheticInstance(subclus[SubclussCVperm_pos[1,1],],getNeigbours(SubclussCVperm_pos[1,1],SubclussCVperm_pos[,2],subclus))
+```
+
+Una vez que tenemos todas las funciones solamente queda ensamblar para tener el método SMOTE. Se han implementado más funciones para mantener la función SMOTE lo más genérica posible.
+
+```{r}
+countUnique = function(data){
+  classes = NULL
+  if(is.factor(data)){
+     classes = levels(data)
+  }
+  else{
+    classes = unique(data) 
+  }
+  count = vector(mode = "integer", length = length(classes))
+  names(count) = classes
+  for(i in 1:length(classes)){
+     count[i] = sum(classes[i] == data ) 
+  }
+  return(list(count=count,classes=classes))
+}
+
+smote = function(data,labelIndex){
+
+  #instancesInfo = countUnique(data[,labelIndex]) #Cuenta y listado de clases
+  
+  #Supose number of clases = 2
+  # minorityClassIndex = which(instancesInfo$count == min(instancesInfo$count))
+  # mostClassIndex = which(instancesInfo$count == max(instancesInfo$count))
+  # 
+  # minorityClass = instancesInfo$classes[minorityClassIndex]
+  # mostClass = instancesInfo$classes[mostClassIndex]
+  # 
+  # instancesMin = instancesInfo$count[minorityClassIndex]
+  # instancesMax = instancesInfo$count[mostClassIndex]
+  
+  # while( minorityClassIndex != mostClassIndex){
+  #   minorityIndexes = which(data[,labelIndex] == minorityClass)
+  #   
+  #   #iterar por cada uno de los indices de los minoritarios
+  #   for(i in 1:length(minorityIndexes)){
+  #     nnI = getNeighbours(minorityIndexes[i],minorityIndexes[-i],data)
+  #     siI = syntheticInstance(data[minorityIndexes[i],],nnI)
+  #     data = rbind(data,siI)
+  #   }
+  #   
+  #   instancesInfo = countUnique(data[,labelIndex])
+  #   
+  #   minorityClassIndex = which(instancesInfo$count == min(instancesInfo$count))
+  #   mostClassIndex = which(instancesInfo$count == max(instancesInfo$count))
+  # 
+  #   minorityClass = instancesInfo$classes[minorityClassIndex]
+  #   mostClass = instancesInfo$classes[mostClassIndex]
+  #  
+  # }
+  
+  #while(getIR(data[,labelIndex]) > 1){
+  for(ir in 1:round(getIR(data[,labelIndex]))){
+     minorityIndexes = which(data[,labelIndex] == 0)
+     for(i in 1:length(minorityIndexes)){
+      nnI = getNeighbours(minorityIndexes[i],minorityIndexes[-i],data)
+      siI = syntheticInstance(data[minorityIndexes[i],],nnI)
+      data = rbind(data,siI)
+    }
+  }
+  return(data)
+}
+data2 = smote(subclus,3)
+```
