@@ -1,65 +1,27 @@
----
-title: "Clasificación no balanceada"
-author: "Laura del Pino Díaz"
-date: "5/2/2017"
-header-includes: \usepackage[spanish]{babel}
-output: pdf_document
-toc: true
----
-
-```{r setup, include=FALSE}
+## ----setup, include=FALSE------------------------------------------------
 knitr::opts_chunk$set(echo = TRUE)
 options(width=60)
 knitr::opts_chunk$set(comment = "", warning = FALSE, message = FALSE, echo = TRUE, tidy = TRUE, size="small")
-```
 
-# Clasificación no balanceada
-
-La clasificación no balanceada se produce cuando queremos diferenciar al menos dos clases pero de una de ellas tenemos muy pocos ejemplos en comparación con las restantes clases.
-
-##Objetivos
-
-En esta práctica se persiguen los siguientes objetivos:
-* Preparar los datos para la clasificación.
-* Implementar la estrategia _Random Oversampling_ (ROS)
-* Implementar la estrategia _Random Undersampling_ (RUS)
-* Implementar la estrategia _Synthetic Minority Oversampli Technique_ (SMOTE)
-
-##Carga de los conjuntos de datos
-
-Los conjuntos de datos que vamos a utilizar en esta práctica son _sublus_ y _circle_. Se procede a su carga:
-
-```{r}
+## ------------------------------------------------------------------------
 subclus <- read.table("subclus.txt", sep=",")
 colnames(subclus) <- c("Att1", "Att2", "Class")
 
 circle <- read.table("circle.txt", sep = ",")
 colnames(circle) <- c("Att1", "Att2", "Class")
-```
 
-##Estudio del desbalanceo
-
-Descubrir  que un conjunto de datos está desbalanceado puede darse en la fase de visualización. Visualizamos las dos bases de datos:
-
-```{r}
+## ------------------------------------------------------------------------
 #subcluss
 plot(subclus$Att1, subclus$Att2, main="Subcluss")
 points(subclus[subclus$Class==0,1],subclus[subclus$Class==0,2],col="red")
 points(subclus[subclus$Class==1,1],subclus[subclus$Class==1,2],col="blue")
-```
-Como podemos ver tenemos una clase minoritaria coloreada en rojo en medio de todo el espacio de puntos y con solapamiento entre esta clase y la mayoría. 
 
-```{r}
+## ------------------------------------------------------------------------
 plot(circle$Att1, circle$Att2, main="circle")
 points(circle[circle$Class==0,1],circle[circle$Class==0,2],col="red")
 points(circle[circle$Class==1,1],circle[circle$Class==1,2],col="blue")
-```
 
-En el caso de la base de datos _circle_ tenemos un problema más sencillo ya que no tenemos el problema añadido del solapamiento entre clases.
-
-Medir el desbalanceo puede darnos una idea de cómo se distribuyen las clases en nuestro conjunto de datos. Una forma de representarlo es el índice de desbalanceo que procedemos a calcular:
-
-```{r}
+## ------------------------------------------------------------------------
 getIR = function(classData){
 nClass0 <- sum(classData == 0)
 nClass1 <- sum(classData == 1)
@@ -72,17 +34,8 @@ IR_circle = getIR(circle$Class)
 
 IR_subcluss
 IR_circle
-```
 
-Como podemos ver la clase 1 en ambos casos es la mayoritaria, siendo en el caso de la base de datos _subcluss_ 5 veces mayor que la minoritaria y en el caso de la base de datos _circle_ 42.45 veces más abundante los ejemplos de la clase mayoritaria. 
-
-##Clasificador de control
-
-Ahora que conocemos como se comportan los conjuntos de datos, vamos a lanzar un clasificador que nos muestre la problemática de clasificar los dos conjuntos en el estado actual. 
-
-Para mejorar las condiciones de entrenamiento del clasificador lo vamos a entrenar utilizando la técnica de validación cruzada de 5 particiones. Por ello creamos las particiones de cada conjunto de datos, respetando siempre el ratio de desbalanceo en cada una de las particiones. 
-
-```{r}
+## ------------------------------------------------------------------------
 #subcluss
 pos <- (1:dim(subclus)[1])[subclus$Class==0]
 neg <- (1:dim(subclus)[1])[subclus$Class==1]
@@ -102,11 +55,8 @@ circleCVperm_neg <- matrix(sample(neg,length(neg)), ncol=5, byrow=T)
 
 circleCVperm <- rbind(circleCVperm_pos, circleCVperm_neg)
 
-```
 
-Con las particiones preparadas entrenamos el clasificador
-
-```{r}
+## ------------------------------------------------------------------------
 library(class)
 knn.pred = NULL
 for( i in 1:5){
@@ -119,10 +69,8 @@ tpr <- sum(subclus$Class[as.vector(SubclussCVperm)] == 0 & knn.pred == 1) / sum(
 tnr <- sum(subclus$Class[as.vector(SubclussCVperm)] == 1 & knn.pred == 2) / sum(subclus$Class == 1)
 gmean <- sqrt(tpr * tnr)
 gmean
-```
- Como se muestra el clasificador tienen una alta tasa de acierto perteneciente prácticamente en su totalidad al acierto de la clase mayoritaria. De hecho se espera que para el conjunto de datos _circle_ sea  mayor puesto que la clase mayoritaria es aún más abundante. 
- 
-```{r}
+
+## ------------------------------------------------------------------------
 knn.pred = NULL
 for( i in 1:5){
   predictions <- knn(circle[-circleCVperm[,i], -3], circle[circleCVperm[,i], -3], circle[-circleCVperm[,i], 3], k = 3)
@@ -134,14 +82,8 @@ tpr <- sum(circle$Class[as.vector(circleCVperm)] == 0 & knn.pred == 1) / sum(cir
 tnr <- sum(circle$Class[as.vector(circleCVperm)] == 1 & knn.pred == 2) / sum(circle$Class == 1)
 gmean <- sqrt(tpr * tnr)
 gmean
-```
-Como se esperaba la tasa de acierto ha aumentado por el porcentaje de la clase mayoritaria, pero este crecimiento ha sido moderado puesto que la clase minoritaria no tiene solapamiento con la mayoritaria. 
 
-#Random Oversampling (ROS)
-
-La técnica _Random Oversampling_ toma los valores que ya existen de la clase minoritaria y genera nuevos ejemplos duplicando los existentes. Aplicaremos esta técnica a los dos conjuntos de datos que ya tenemos y compararemos la gmean en ambos casos con la obtenida en el caso de control. 
-
-```{r}
+## ------------------------------------------------------------------------
 knn.pred = NULL
 for( i in 1:5){
   
@@ -166,10 +108,8 @@ tpr.ROS <- sum(subclus$Class[as.vector(SubclussCVperm)] == 0 & knn.pred == 1) / 
 tnr.ROS <- sum(subclus$Class[as.vector(SubclussCVperm)] == 1 & knn.pred == 2) / sum(subclus$Class == 1)
 gmean.ROS <- sqrt(tpr.ROS * tnr.ROS)
 gmean.ROS
-```
-La gmean ha mejorado con respecto a la original aunque sigue manteniendo un margen de error debido al solapamiento entre clases.
 
-```{r}
+## ------------------------------------------------------------------------
 knn.pred = NULL
 for( i in 1:5){
   
@@ -194,15 +134,8 @@ tpr.ROS <- sum(circle$Class[as.vector(circleCVperm)] == 0 & knn.pred == 1) / sum
 tnr.ROS <- sum(circle$Class[as.vector(circleCVperm)] == 1 & knn.pred == 2) / sum(circle$Class == 1)
 gmean.ROS <- sqrt(tpr.ROS * tnr.ROS)
 gmean.ROS
-```
 
-Al igual que en el caso anterior, la gmean ha mejorado al mejorar el balance de la clase minoritaria. 
-
-#Random Undersampling (RUS)
-
-La técnica de _Random Undersampling_ equilibra las dos clases mediante el borrado aleatorio de registros de la clase mayoritaria. Aplicaremos esta técnica a ambos conjuntos de datos y compararemos la gmean resultante con la obtenida en los dos apartados anteriores.
-
-```{r}
+## ------------------------------------------------------------------------
 knn.pred = NULL
 for( i in 1:5){
   
@@ -225,11 +158,8 @@ tpr.RUS <- sum(subclus$Class[as.vector(SubclussCVperm)] == 0 & knn.pred == 1) / 
 tnr.RUS <- sum(subclus$Class[as.vector(SubclussCVperm)] == 1 & knn.pred == 2) / sum(subclus$Class == 1)
 gmean.RUS <- sqrt(tpr.RUS * tnr.RUS)
 gmean.RUS
-```
 
-Se ha obtenido un valor de gmean situado entre el obtenido en el clasificador de control y el de ROS, esto es debido a que al eliminar registros de la clase mayoritaria para igualar el número de observaciones de ambas clases ha perdido información sobre la clase mayoritaria. 
-
-```{r}
+## ------------------------------------------------------------------------
 knn.pred = NULL
 for( i in 1:5){
   
@@ -252,17 +182,8 @@ tpr.RUS <- sum(circle$Class[as.vector(circleCVperm)] == 0 & knn.pred == 1) / sum
 tnr.RUS <- sum(circle$Class[as.vector(circleCVperm)] == 1 & knn.pred == 2) / sum(circle$Class == 1)
 gmean.RUS <- sqrt(tpr.RUS * tnr.RUS)
 gmean.RUS
-```
 
-En este caso ha bajado ligeramente el valor de la gmean por el mismo motivo que en el caso anterior, porque pierde parte de la información de la clase mayoritaria, pero como en esta basa de datos los datos no están solapados esta diferencia no se nota demasiado. 
-
-#Synthetic Minority Oversampling Technique (SMOTE)
-
-La técnica de Synthetic Minority Oversampling aumenta el número de registros de la clase minoritaria creando observaciones entre los puntos ya existentes de la clase minoritaria. 
-
-El primer paso en el desarrollo de esta técnica es definir la distancia entre los puntos. Para ello tomamos la distancia euclídea entre los atributos numéricos, y para los atributos categóricos tomamos como distancia 1 siempre que no tengan la misma categoría. 
-
-```{r}
+## ------------------------------------------------------------------------
 distance <- function(i, j, data){
   sum <- 0
   for(f in 1:dim(data)[2]){
@@ -277,11 +198,8 @@ distance <- function(i, j, data){
   sum <- sqrt(sum)
   return(sum)
 }
-```
 
-Una vez tenemos la función de distancia, tenemos que seleccionar aquellos puntos que nos ayudarán a crear los nuevos ejemplos, es decir los vecinos al punto que estamos considerando. 
-
-```{r}
+## ------------------------------------------------------------------------
 getNeighbours = function(x,minorityIndices,train){
   minority = train[minorityIndices,]
   distances = NULL
@@ -292,10 +210,8 @@ getNeighbours = function(x,minorityIndices,train){
   return(minority[indexInMinority,])
 }
  
-```
 
-Con la selección de los vecinos más cercanos podemos crear nuevas instacias entre ellos.
-```{r}
+## ------------------------------------------------------------------------
 syntheticInstance = function(x,nearestNeighbours){
   chosenNeighbourIndex = ceiling(runif(1)*5)
   chosenNeighbour = nearestNeighbours[chosenNeighbourIndex,]
@@ -313,13 +229,8 @@ syntheticInstance = function(x,nearestNeighbours){
   return(result)
 }
 
-```
 
-Una vez que tenemos todas las funciones solamente queda ensamblar para tener el método SMOTE. Este método asume que solo hay dos clases, una mayoritaria y otra minoritaria y a parte de los datos se le pasa el número de la columna que contiene las etiquetas. 
-
-El método SMOTE hará que por cada observación de la clase minoritaria, se creen tantos puntos como el valor de IR que se calculó al principio, es decir si para el conjunto de datos _subclus_ la clase mayoritaria era 4 veces mayor que la clase minoritaria, se crearán 4 nuevas observaciones para igualar el número de observaciones.
-
-```{r}
+## ------------------------------------------------------------------------
 
 smote = function(data,labelIndex){
   minorityIndexes = which(data[,labelIndex] == 0)
@@ -334,19 +245,14 @@ smote = function(data,labelIndex){
   
   return(data)
 }
-```
 
-Aplicamos SMOTE a la base de datos de _subclus_ y obtenemos la siguiente gráfica.
-```{r}
+## ------------------------------------------------------------------------
 data2 = smote(subclus,3)
 plot(data2$Att1, data2$Att2, main="Subcluss2")
 points(data2[data2$Class==0,1],data2[data2$Class==0,2],col="red")
 points(data2[data2$Class==1,1],data2[data2$Class==1,2],col="blue")
-```
 
-Como podemos ver el método ha colocado los puntos cerca de sus vecinos, reforzando así la clase. 
-Pasamos a obtener otra vez las particiones y la gmean:
-```{r}
+## ------------------------------------------------------------------------
 pos <- (1:dim(data2)[1])[data2$Class==0]
 neg <- (1:dim(data2)[1])[data2$Class==1]
 
@@ -367,19 +273,14 @@ tpr <- sum(data2$Class[as.vector(d2CVperm)] == 0 & knn.pred == 1) / sum(data2$Cl
 tnr <- sum(data2$Class[as.vector(d2CVperm)] == 1 & knn.pred == 2) / sum(data2$Class == 1)
 gmean <- sqrt(tpr * tnr)
 gmean
-```
-Al reforzar la clase minoritaria que está solapada con la clase mayoritaria, el modelo de clasificación de los k-vecinos más cercanos está  dando problemas a la hora de determinar si pertenece a una clase o a otra, por lo que aumenta la tasa de error.
 
-```{r}
+## ------------------------------------------------------------------------
 circle2 = smote(circle,3)
 plot(circle2$Att1, circle2$Att2, main="circle2s")
 points(circle2[circle2$Class==0,1],circle2[circle2$Class==0,2],col="red")
 points(circle2[circle2$Class==1,1],circle2[circle2$Class==1,2],col="blue")
-```
 
-Al igual que en el caso anterior obtenemos que la clase minoritaria está reforzada con nuevos ejemplos similares a los originales. Si ahora obtenemos la gmean tras haber hecho la validación cruzada tenemos como resultado:
-
-```{r}
+## ------------------------------------------------------------------------
 pos <- (1:dim(circle2)[1])[circle2$Class==0]
 neg <- (1:dim(circle2)[1])[circle2$Class==1]
 
@@ -399,17 +300,4 @@ tpr <- sum(circle2$Class[as.vector(circle2CVperm)] == 0 & knn.pred == 1) / sum(c
 tnr <- sum(circle2$Class[as.vector(circle2CVperm)] == 1 & knn.pred == 2) / sum(circle2$Class == 1)
 gmean <- sqrt(tpr * tnr)
 gmean
-```
-
-Por el contrario reforzar la clase minoritaria en la base de datos _circle_ ayuda al clasificador a diferenciar mejor las dos clases, permitiendole tener casi el 100% de aciertos. 
-
-\newpage
-#Conclusión.
-
-El método ROS mejora la clasificación creando nuevos ejemplos en puntos donde ya hay puntos, lo que es malo si las clases se solapan porque no aporta nada nuevo a la clasificación y bueno si están bien definidas porque refuerzan la zona del espacio en la que se encuentran las observaciones y las fronteras del mismo.  
-
-El método RUS al eliminar ejemplos de la clase mayoritaria, haciendo que el conjunto de datos sea menor, no favorece la clasificación puesto que pierde información sobre la clase mayoritaria. 
-
-El método SMOTE al generar nuevos ejemplos de la clase minoritaria, similares pero no iguales a los ya existentes ayuda a generar nueva información sobre esta clase y a diferenciarla de la mayoritaria. No obstante si las clases están solapadas, puede disminuir el número de ejemplos bien clasificados. 
-
 
