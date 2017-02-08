@@ -214,7 +214,7 @@ MiPlot_resultados_TestGrubbs = function(datos){
     valor.de.outlier.Grubbs  = datos[indice.de.outlier.Grubbs]
     cat('Valor del outlier: ')
     cat(valor.de.outlier.Grubbs)
-    MiPlot_Univariate_Outliers (datos, "Test de Grubbs", indice.de.outlier.Grubbs)
+    MiPlot_Univariate_Outliers (datos,indice.de.outlier.Grubbs,"Test de Grubbs")
   }
   else
     cat('No hay outliers')
