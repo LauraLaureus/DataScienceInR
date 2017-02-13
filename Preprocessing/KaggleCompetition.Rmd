@@ -1,0 +1,41 @@
+---
+title: "PreprocesamientoKaggle"
+author: "Laura del Pino Díaz"
+date: "13/2/2017"
+header-includes: \usepackage[spanish]{babel}
+output: pdf_document
+toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(width=60)
+knitr::opts_chunk$set(comment = "", warning = FALSE, message = FALSE, echo = TRUE, tidy = TRUE, size="small")
+```
+\newpage
+
+#Preprocesamiento y clasificación
+
+##Objetivo del proyecto
+
+El objetivo de este proyecto es clasificar lo más correctamente posible los accidentes de tráfico recogidos en la base de datos. Para ello tendremos que aplicar los conocimientos obtenidos sobre preprocesamiento y las distintas técnicas de clasificación aprendidas, de forma que no nos quedemos con un modelo único de clasificación, sino que vayamos iterando sobre uno inicial y mejorándolo en cada iteración. 
+
+##La base de datos
+La base de datos está divida en datos de entrenamiento y datos de test. Los datos de entrenamiento recogen 30002 instancias de 30 variables con la variable clase asignada, mientras que la partición de test contiene 19998 instancias y carece de la variable con la etiqueta asignada. 
+
+```{r}
+train  = read.csv("accidentes-kaggle.csv")
+test = read.csv("accidentes-kaggle-test.csv")
+```
+
+##La salida esperada
+El formato de salida será un fichero .csv en el que se muestra el identificador de la instancia y su valor de salida.
+
+Como prueba de como funciona el envío a la plataforma Kaggle vamos a crear un fichero .csv que tiene el número de registros requeridos y una etiqueta 
+
+```{r}
+id = 1:19998
+Prediction = rep(factor("Atropello"), 19998)
+outputDataset = data.frame(id,Prediction)
+write.table(outputDataset, file = "./Output.csv", sep = ",",row.names = FALSE)
+```
