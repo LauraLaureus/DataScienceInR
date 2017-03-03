@@ -28,7 +28,7 @@ train  = read.csv("accidentes-kaggle.csv")
 test = read.csv("accidentes-kaggle-test.csv")
 ```
 
-##La salida esperada
+##El formato de salida
 El formato de salida será un fichero .csv en el que se muestra el identificador de la instancia y su valor de salida.
 
 Como prueba de como funciona el envío a la plataforma Kaggle vamos a crear un fichero .csv que tiene el número de registros requeridos y una etiqueta 
@@ -39,3 +39,52 @@ Prediction = rep(factor("Atropello"), 19998)
 outputDataset = data.frame(id,Prediction)
 write.table(outputDataset, file = "./Output.csv", sep = ",",row.names = FALSE)
 ```
+
+##Análisis de datos
+Antes de desarrollar ningún tipo de modelo de clasificación debemos saber como está estructurada nuestra base de datos. Para ello miramos los tipos de datos:
+
+```{r}
+str(train)
+```
+
+La gran mayoría de las variables son categóricas representadas con factores de distintos niveles. El que llama la atención es la variable _HORA_ que tiene valores numéricos que se han interpretado como factores. Eso lo corregimos con la siguiente función. 
+
+```{r}
+train$HORA = as.numeric(as.character(train$HORA))
+```
+
+###Análisis de valores perdidos
+En la función _str_ también podemos ver que algunas variables presentan valores perdidos. Por lo que resultaría interesante saber el procentaje de estos valores perdidos.
+
+```{r}
+apply(train, 2, function(col)sum(is.na(col))/length(col))
+```
+
+Ante el alto porcentaje de valores perdidos de la variable ACOND_CALZADA, podríamos pensar que esta variable no contribuye a la clasificación, pero podríamos perder una variable que clasifique bien algún tipo de clase. Para probar esta hipótesis vamos a coger todos aquellos valores que no están perdidos y mirar la diversidad de clases que tiene asociadas. 
+
+```{r}
+levels(as.factor(train[which(is.na(train$ACOND_CALZADA)), "TIPO_ACCIDENTE"]))
+```
+ Como vemos salen todos los niveles posibles, por lo que no favorece la clasificación de ninguna clase, con lo que gana votos para ser eliminado ante una selección de características. 
+ 
+###Estudio de los estadísticos principales.
+
+Una aproximación al comportamiento de las variables con las que estamos trabajando son los valores de los estadísticos principales, es decir, de la media, mediana,cuartiles en conjunto con el valor máximo y mínimo. En el caso de las variables no numéricas, es decir, todas aquellas que son categóricas lo que obtendremos es una relación de los valores más frecuentes con dicha frecuencia. 
+
+
+```{r}
+summary(train)
+```
+
+En el caso de la variable _TOTVICTIMAS_ vemos que la gran mayoría de los registros tienen el valor 1 hasta el tercer cuartil, puede ser una variable decisiva en algún arbol de desición, para distinguir entre algunas clases o por el contrario no aportar información en la gran mayoría de los casos. 
+Como esta variable, las variables _TOTMUERTOS_, _TOTHERIDOSGRAVES_ no varían su valor hasta pasado el tercer cuartil. 
+Las restantes variables numéricas tienen un comportamiento similar, pero su valor si se modifica antes del tercer cuartil. 
+Si nos fijamos el el valor máximo, de las variables numérticas, tenemos que difieren significativamente, tanto que ante un test de distancia intercuartil para la determinación de anomalías, todos ellos saldrían como anomalías. No vamos a eliminar los registros con dichos valores porque se puede dar el caso de que sean anomalías en esta variable pero en combinación con otras variables sea un valor _"normal"_ .
+
+Veámoslo en un boxplot:
+
+```{r}
+library(graphics)
+boxplot(train[,8:12],use.cols=TRUE)
+```
+
