@@ -40,6 +40,16 @@ outputDataset = data.frame(id,Prediction)
 write.table(outputDataset, file = "./Output.csv", sep = ",",row.names = FALSE)
 ```
 
+Para facilitar la salida de los sucesivos ficheros de salida vamos a crear la siguiente función _ToFile_ al que se le pasa las predicciones para que las imprima.
+
+```{r}
+ToFile = function(Prediction,fileTitle = "Output.csv"){
+Id = 1:19998
+outputDataset = data.frame(Id,Prediction)
+write.table(outputDataset, file = fileTitle, sep = ",",row.names = FALSE)
+}
+```
+
 ##Análisis de datos
 Antes de desarrollar ningún tipo de modelo de clasificación debemos saber como está estructurada nuestra base de datos. Para ello miramos los tipos de datos:
 
@@ -85,6 +95,72 @@ Veámoslo en un boxplot:
 
 ```{r}
 library(graphics)
-boxplot(train[,8:12],use.cols=TRUE)
+boxplot(train[,8:12],use.cols=TRUE,las = 2)
 ```
 
+###Estudio de la correlación
+
+De estas variables continuas podemos estudiar la correlación entre ellas. 
+
+```{r}
+cor(train[,8:12])
+```
+
+Se puede observar que el número de víctimas y el número de heridos leves está muy correlado, de hecho el 87% de los casos de uno se explician con el otro. Si este porcentaje  fuese mayor me plantearía eliminar una de las dos, por ahora eliminarlo solo quedaría si necesitase entrenar un modelo y por el volumen de datos su aprendizaje fuese lento. 
+
+###Relaciones de las variables con la salida
+
+Todos los pasos anteriores se han concentrado en las variables numéricas, obviando la existencia de las variables categóricas. En este punto del análisis de datos vamos a estudiar cómo se relacionan con la salida. 
+
+```{r}
+
+plot(train[,c(-1,-3-8,-9,-10,-11,-12)])
+```
+
+#Aproximación 1: árbol de desición. 
+
+ Como primera aproximación vamos a utilizar un modelo de árbol de desición. Uno de los modelos más robustos ante anomalías.  Para este caso vamos a determinar que ignore todos aquellos valores perdidos. 
+ 
+```{r}
+library(tree)
+train2 = train[,c(-5,-15)] #Se eliminan aquellas variables que generan problemas con el algoritmo tree.
+test2 = test[,c(-5,-15)]
+test2$HORA = as.numeric(test2$HORA)
+treeModel = tree(TIPO_ACCIDENTE~., train2)
+treePredictions = predict(treeModel,test2,type = "class")
+treePredictions
+
+ToFile(treePredictions,"TreeTest.csv")
+```
+
+El resultado obtenido por este modelo ha sido 0.81832
+
+#Aproximación 1b: árbol de decisión con selección de características.
+
+Del análisis previo tenemos la variable ACOND_CALZADA como variable que no aporta mucha informaición ya que en el 78% de sus valores están perdidos y el resto de las instancias  pueden corresponde con alguna de las seis clases, por lo que no ayuda en la clasificación. En esta aproximación quiero desarrollar un modelo del tipo árbol, eliminando esta variable y comprobar si da un resultado igual al anterior. 
+
+```{r}
+test3 = test2[,-18]
+train3 = train2[,-18]
+treeModel = tree(TIPO_ACCIDENTE~., train3)
+treePredictions = predict(treeModel,test3,type = "class")
+treePredictions
+
+ToFile(treePredictions,"TreeTest2.csv")
+```
+
+Este modelo ha obtenido una ligera mejora con respecto con el anterior: 0.00059 teniendo una puntuación final de 0.81891.
+
+#Aproximación 1b2: árbol de decisión con selección de características y imputación de valores. 
+
+En los anteriores modelos hemos ignorardo los valores perdidos en la construcción del modelo. En esta variante vamos a realizar una imputación de valores. 
+```{r}
+library(mice)
+
+imputedData = mice(train, m=5)
+trainImputed = complete(imputedData)
+
+treeModel = tree(TIPO_ACCIDENTE~., train3)
+treePredictions = predict(treeModel,test3,type = "class")
+ToFile(treePredictions,"TreeTest2.csv")
+```
