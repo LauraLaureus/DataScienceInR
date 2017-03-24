@@ -61,6 +61,7 @@ La gran mayoría de las variables son categóricas representadas con factores de
 
 ```{r}
 train$HORA = as.numeric(as.character(train$HORA))
+test$HORA = as.numeric(as.character(test$HORA))
 ```
 
 ###Análisis de valores perdidos
@@ -157,10 +158,76 @@ En los anteriores modelos hemos ignorardo los valores perdidos en la construcci�
 ```{r}
 library(mice)
 
-imputedData = mice(train, m=5)
-trainImputed = complete(imputedData)
+#imputedData = mice(train, m=5, method = "pmm") Comentado para que no se ejecute en llamadas sucesivas de Rmarkdown dado que tarda un día en terminar su ejecución
+#trainImputed = complete(imputedData)
+#write.csv(trainImputed,"./imputedData.csv") <-data set con los valores imputados en la primera ejecución de mice.
+```
+Comprobemos que los porcentajes de valores perdidos se han reducido tras la imputación
+```{r}
+originalNAs = apply(train, 2, function(col)sum(is.na(col))/length(col)) 
+imputedNAs = apply(trainImputed, 2, function(col)sum(is.na(col))/length(col))
+data.frame(originalNAs,imputedNAs)
+```
 
-treeModel = tree(TIPO_ACCIDENTE~., train3)
-treePredictions = predict(treeModel,test3,type = "class")
+Podemos ver que no tenemos ningún valor perdido. Ahora entrenamos otra estructura de tipo árbol con esta nueva base de datos. 
+
+```{r}
+treeModel = tree(TIPO_ACCIDENTE~.-ACOND_CALZADA, (trainImputed[,c(-5,-15,-18)]))
+treePredictions = predict(treeModel,test2,type = "class")
 ToFile(treePredictions,"TreeTest2.csv")
 ```
+
+Este modelo en la clasificación a obtenido una puntuación de 0.81891 lo que no es una mejora con respecto al método anterior. Esto también se puede leer como la ausencia de valores y la imputación de los mismos hace el mismo efecto, por lo que a partir de ahora vamos a proseguir con árboles de desición con el dataset completo para evitar problemas de característ. 
+
+#Aproximación 1c: Random forest
+
+TODO: hacer una intro de random forest
+
+```{r}
+library(randomForest)
+library(mice)
+
+subsetTrainImputed = trainImputed[,c(-7,-15,-29)]
+RFModel = randomForest( TIPO_ACCIDENTE~.,data = subsetTrainImputed)
+test4 = test[,c(-7,-15,-29)]
+RFPredictions = predict(RFModel,test4)
+ToFile(RFPredictions,"RandomForest.csv")
+```
+
+Si visualizamos el archivo, nos encontramos con que la infinita mayoría de los valores se han determinado como valores perdidos, por lo que no testeamos este modelo en la plataforma Kaggle. 
+
+#Aproximación 1c2: Randomforest con valores imputados en el conjunto de test
+
+```{r}
+test4Imputed = complete(mice(test4, method = "pmm",m=1))
+RFModel = randomForest( TIPO_ACCIDENTE~.,data = subsetTrainImputed)
+iRFPredictions = predict(RFModel,test4Imputed)
+ToFile(iRFPredictions,"iRandomForest.csv")
+```
+
+0.82938 	
+
+#Aproximación 1c3: RandomForest con un mayor número de árboles y con valores imputados en el conjunto de test
+
+##600 árboles
+
+```{r}
+
+RFModel2 = randomForest( TIPO_ACCIDENTE~.,data = subsetTrainImputed, ntree=600)
+iRFPredictions = predict(RFModel2,test4Imputed)
+ToFile(iRFPredictions,"it600RandomForest.csv")
+```
+
+0.82988
+
+##1000 árboles
+
+```{r}
+
+RFModel2 = randomForest( TIPO_ACCIDENTE~.,data = subsetTrainImputed, ntree=1000)
+iRFPredictions = predict(RFModel2,test4Imputed)
+ToFile(iRFPredictions,"it1000RandomForest.csv")
+```
+
+0.82918 añadir más árboles no implica una mejoría. 
+
