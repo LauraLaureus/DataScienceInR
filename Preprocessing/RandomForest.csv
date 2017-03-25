@@ -3017,7 +3017,7 @@
 3016,NA
 3017,NA
 3018,NA
-3019,"Atropello"
+3019,"Salida_Via"
 3020,NA
 3021,NA
 3022,NA
@@ -3760,7 +3760,7 @@
 3759,NA
 3760,NA
 3761,"Colision_Vehiculos"
-3762,"Atropello"
+3762,"Otro"
 3763,NA
 3764,NA
 3765,NA
@@ -6202,7 +6202,7 @@
 6201,NA
 6202,"Colision_Vehiculos"
 6203,NA
-6204,"Salida_Via"
+6204,"Vuelco"
 6205,NA
 6206,NA
 6207,NA
@@ -7681,7 +7681,7 @@
 7680,NA
 7681,NA
 7682,NA
-7683,"Salida_Via"
+7683,"Atropello"
 7684,NA
 7685,NA
 7686,NA
@@ -8956,7 +8956,7 @@
 8955,NA
 8956,NA
 8957,NA
-8958,"Vuelco"
+8958,"Atropello"
 8959,NA
 8960,NA
 8961,NA
@@ -9455,7 +9455,7 @@
 9454,NA
 9455,NA
 9456,NA
-9457,"Atropello"
+9457,"Vuelco"
 9458,"Colision_Vehiculos"
 9459,NA
 9460,"Colision_Vehiculos"
@@ -10930,7 +10930,7 @@
 10929,NA
 10930,NA
 10931,NA
-10932,"Salida_Via"
+10932,"Atropello"
 10933,"Colision_Vehiculos"
 10934,NA
 10935,NA
@@ -11179,7 +11179,7 @@
 11178,NA
 11179,NA
 11180,NA
-11181,"Atropello"
+11181,"Otro"
 11182,NA
 11183,NA
 11184,NA
@@ -11276,7 +11276,7 @@
 11275,NA
 11276,NA
 11277,"Atropello"
-11278,"Atropello"
+11278,"Salida_Via"
 11279,NA
 11280,NA
 11281,NA
@@ -12539,7 +12539,7 @@
 12538,"Atropello"
 12539,NA
 12540,"Colision_Vehiculos"
-12541,"Atropello"
+12541,"Salida_Via"
 12542,NA
 12543,NA
 12544,NA
@@ -13286,7 +13286,7 @@
 13285,"Colision_Vehiculos"
 13286,"Colision_Vehiculos"
 13287,NA
-13288,"Atropello"
+13288,"Otro"
 13289,NA
 13290,NA
 13291,NA
@@ -15631,7 +15631,7 @@
 15630,NA
 15631,NA
 15632,"Colision_Vehiculos"
-15633,"Salida_Via"
+15633,"Atropello"
 15634,NA
 15635,NA
 15636,"Colision_Vehiculos"
@@ -16501,7 +16501,7 @@
 16500,NA
 16501,NA
 16502,NA
-16503,"Otro"
+16503,"Salida_Via"
 16504,NA
 16505,NA
 16506,NA
@@ -17133,7 +17133,7 @@
 17132,NA
 17133,NA
 17134,NA
-17135,"Salida_Via"
+17135,"Atropello"
 17136,NA
 17137,NA
 17138,NA
@@ -18151,7 +18151,7 @@
 18150,NA
 18151,NA
 18152,NA
-18153,"Atropello"
+18153,"Vuelco"
 18154,"Colision_Vehiculos"
 18155,NA
 18156,NA

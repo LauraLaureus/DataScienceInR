@@ -129,8 +129,6 @@ test2 = test[,c(-5,-15)]
 test2$HORA = as.numeric(test2$HORA)
 treeModel = tree(TIPO_ACCIDENTE~., train2)
 treePredictions = predict(treeModel,test2,type = "class")
-treePredictions
-
 ToFile(treePredictions,"TreeTest.csv")
 ```
 
@@ -145,8 +143,6 @@ test3 = test2[,-18]
 train3 = train2[,-18]
 treeModel = tree(TIPO_ACCIDENTE~., train3)
 treePredictions = predict(treeModel,test3,type = "class")
-treePredictions
-
 ToFile(treePredictions,"TreeTest2.csv")
 ```
 
@@ -223,11 +219,160 @@ ToFile(iRFPredictions,"it600RandomForest.csv")
 ##1000 árboles
 
 ```{r}
-
 RFModel2 = randomForest( TIPO_ACCIDENTE~.,data = subsetTrainImputed, ntree=1000)
 iRFPredictions = predict(RFModel2,test4Imputed)
 ToFile(iRFPredictions,"it1000RandomForest.csv")
 ```
 
 0.82918 añadir más árboles no implica una mejoría. 
+
+##Nodos terminales mínimos = 6
+
+```{r}
+RFModel3 = randomForest( TIPO_ACCIDENTE~.,data = subsetTrainImputed,ntree=600,nodesize=6)
+iRFPredictions = predict(RFModel3,test4Imputed)
+ToFile(iRFPredictions,"i600n6RandomForest.csv")
+```
+
+#Aproximación 2: Boosting
+
+```{r}
+library(adabag)
+library(caret)
+
+#BoostingModel = adabag::boosting(TIPO_ACCIDENTE~.,data = subsetTrainImputed,mfinal = 10,control = rpart::rpart.control(maxdepth =2))
+```
+
+No se realizó este experimento porque su tiempo de ejecución.
+
+#Aproximación 3: Datos balanceados por duplicidad.
+
+Un aspecto de los datos que no contemplamos en el análisis previo de los datos es el desbalanceo de las clases. 
+
+```{r}
+lvls = levels(trainImputed[,"TIPO_ACCIDENTE"])
+clss = c()
+for (i in 1:length(lvls)){
+  clss = c( clss, sum(trainImputed == lvls[i])/(dim(trainImputed)[1]))
+}
+
+clss
+```
+
+Como podemos hay un desbalanceo de carga importante dado que una clase representa más de la mitad de las instancias y las otras comparten el espacio restante. Esto supone un problema dado que los modelos probados hasta ahora son sensibles a los casos desbalanceados.
+
+Para corregir esta situación vamos a utilizar dos técnicas de balanceo de carga: la duplicación de registros de cada clase hasta que todos compartan el mismo porcentaje y SMOTE.
+
+En esta primera aproximación a la igualación de carga esperamos que el modelo se sobreajuste a los datos por lo que tenga menor capacidad de generalización con la consecuente falta de test.
+
+```{r}
+lvls = levels(trainImputed[,"TIPO_ACCIDENTE"])
+instances = c()
+for (i in 1:length(lvls)){
+  instances = c( instances, sum(trainImputed == lvls[i]))
+}
+
+instances
+
+maxInstances = max(instances)
+maxInstances
+
+extendedTrainImputed = trainImputed
+
+for(c in 1:length(lvls)){
+  
+  #Tomar el subconjunto de instancias que coincide con el tipo de accidentes
+  trainOfClassSubset = subset(trainImputed,TIPO_ACCIDENTE == lvls[c]) #???
+  
+  
+  subsetCount = dim(trainOfClassSubset)[1]
+  subsetCount
+  while(subsetCount < maxInstances){
+      randSample = sample(trainOfClassSubset,30)
+    extendedTrainImputed = rbind(extendedTrainImputed,randSample)
+    subsetCount = subsetCount + (dim(randSample)[1]) 
+  }
+}
+```
+
+
+```{r}
+clss = c()
+for (i in 1:length(lvls)){
+  clss = c( clss, sum(extendedTrainImputed == lvls[i])/(dim(extendedTrainImputed)[1]))
+}
+
+clss
+```
+
+
+##3a: Duplicidad de registros con el mejor RandomForest
+
+```{r}
+duplicitySubset = extendedTrainImputed[,c(-7,-15,-29)]
+rfDuplicityModel = randomForest(TIPO_ACCIDENTE~.,data = duplicitySubset,ntree=600,nodesize=6)
+isRFPredictions = predict(rfDuplicityModel,test4Imputed)
+ToFile(isRFPredictions,"i600n6DuplicityRandomForest.csv")
+```
+
+0.82889,
+
+##3b: Duplicidad de registros con C4.5
+
+```{r}
+treeModel2 = tree(TIPO_ACCIDENTE~.-ACOND_CALZADA, duplicitySubset[,c(-5)])
+treePredictions = predict(treeModel2,test4Imputed,type = "class")
+ToFile(treePredictions,"DuplicityTreeTest.csv")
+```
+
+0.81891
+
+#Aproximación 4: Smote para el balanceo de las clases
+
+```{r}
+library(DMwR)
+smotedData = SMOTE(TIPO_ACCIDENTE~.,trainImputed)
+smotedTrain = rbind(trainImputed,smotedData)
+```
+
+## 4a: SMOTE con el mejor de los Random Forest
+
+```{r}
+smotedSubset = smotedTrain[,c(-7,-15,-29)]
+rfsmotedModel = randomForest(TIPO_ACCIDENTE~.,data = smotedSubset,ntree=600,nodesize=6)
+isRFPredictions = predict(rfsmotedModel,test4Imputed)
+ToFile(isRFPredictions,"i600n6SMOTERandomForest.csv")
+```
+
+0.82829
+
+## 4b SMOTE con k = 7
+
+```{r}
+smotedData = SMOTE(TIPO_ACCIDENTE~.,trainImputed, k = 7)
+smotedTrain = rbind(trainImputed,smotedData)
+smotedSubset = smotedTrain[,c(-7,-15,-29)]
+rfsmotedModel = randomForest(TIPO_ACCIDENTE~.,data = smotedSubset,ntree=600,nodesize=6)
+isRFPredictions = predict(rfsmotedModel,test4Imputed)
+ToFile(isRFPredictions,"i600n6SMOTEk7RandomForest.csv")
+```
+
+0.82829
+
+## 4c SMOTE con k = 3
+
+```{r}
+smotedData = SMOTE(TIPO_ACCIDENTE~.,trainImputed, k = 3)
+smotedTrain = rbind(trainImputed,smotedData)
+smotedSubset = smotedTrain[,c(-7,-15,-29)]
+rfsmotedModel = randomForest(TIPO_ACCIDENTE~.,data = smotedSubset,ntree=600,nodesize=6)
+isRFPredictions = predict(rfsmotedModel,test4Imputed)
+ToFile(isRFPredictions,"i600n6SMOTEk3RandomForest.csv")
+```
+
+0.82790
+
+#Aproximación X: Folder Ensemble.
+
+TODO: crear X folders con muestras equilibradas y hacer un ensemble de árboles J48. 
 
