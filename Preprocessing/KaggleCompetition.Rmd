@@ -372,7 +372,246 @@ ToFile(isRFPredictions,"i600n6SMOTEk3RandomForest.csv")
 
 0.82790
 
-#Aproximación X: Folder Ensemble.
 
-TODO: crear X folders con muestras equilibradas y hacer un ensemble de árboles J48. 
+#Aproximación 5: Selección de características cuantitativa
 
+En ejemplos anteriores hemos realizado una selección de características basándonos en el número de valores perdidos que tenía cierta variable o en que el método pudiera ejecutarse correctamente. 
+
+En este apartado realizaremos comprobaciones cuantitativas para la selección de características, basándonos en la utilización del paquete FSelector.
+
+Lo primero en lo que nos fijamos a la hora de utilizar un método de selección de características es que nos permita realizar el experimento con las variables _en su estado natural_ , es decir, si son numéricas, se trabaja con numéricas y si son factores se trabaja con factores. 
+
+Los experimentos realizados con los métodos de selección de características son los siguientes:
+
+OneR, este método basado en reglas de asociación calcula el peso generando reglas que tengan un solo término en el antecedente:
+```{r}
+library(mlbench)
+library(FSelector)
+
+weight = FSelector::oneR(TIPO_ACCIDENTE~.,trainImputed)
+subsetW = cutoff.k(weight,5)
+f1 = as.simple.formula(subsetW, "TIPO_ACCIDENTE")
+print(f1)
+```
+
+De este selector obtenemos que la variable de salida _TIPO ACCIDENTE_ viene terminada principalmente por el año, el total de vehículos implicados, las aceras, la densidad de circulación y la zona agrupada. 
+
+
+Para seleccionar las características por la independencia que muestran sobre la variable de salida utilizamos el test de la _chi cuadrado_
+
+```{r}
+
+weight = FSelector::chi.squared(TIPO_ACCIDENTE~.,trainImputed)
+subsetW = cutoff.k(weight,5)
+f2 = as.simple.formula(subsetW, "TIPO_ACCIDENTE")
+print(f2)
+```
+
+Tenemos como resultado que las variables de las que más depende la salida son: el total de vehículos implicados, la zona agrupada, la carretera la zona y las aceras. 
+
+Para saber que variables son las que nos aporta más ganancia de información realizamos el siguiente experimento:
+```{r}
+
+weight = FSelector::information.gain(TIPO_ACCIDENTE~.,trainImputed)
+subsetW = cutoff.k(weight,5)
+f3 = as.simple.formula(subsetW, "TIPO_ACCIDENTE")
+print(f3)
+```
+
+Los anteriores experimentos no tienen todos el mismo resultado dado que usan métricas distintas. Para obtener un resultado común utilizaremos el método _cfs_ que combina ambas métricas. 
+
+```{r}
+
+subset2 = FSelector::cfs(TIPO_ACCIDENTE~.,trainImputed)
+f4 = as.simple.formula(subset2,"TIPO_ACCIDENTE")
+print(f4)
+```
+
+Este método nos devuelve una de las variables que ha aparecido en todas las salidas anteriores. 
+
+Dado que utilizar una única variable, me parece poco apropiado para realizar la clasificación utilizaré otra métrica más: la consistencia. 
+
+```{r}
+subset2 = consistency(TIPO_ACCIDENTE~.,trainImputed)
+f = as.simple.formula(subset2,"TIPO_ACCIDENTE")
+print(f)
+```
+
+##5a - Random Forest con selección de características: consistencia y cfs
+
+Consistencia no se puede usar porque RF no permite usar más de 53 etiquetas y tenemos provincia que si las tiene. 
+
+cfs
+```{r}
+rffsModel = randomForest(f4, trainImputed[,c(-5)])
+rffsPredictions = predict(rffsModel,test4Imputed)
+ToFile(rffsPredictions,"randomForestFeatureSelectionConsistency.csv")
+
+```
+0.73246
+
+##5b - Random forest con selección de características: oneR
+
+```{r}
+rffs2Model = randomForest(f1, trainImputed[,c(-5)])
+rffsPredictions2 = predict(rffs2Model,test4Imputed)
+ToFile(rffsPredictions2,"randomForestFeatureSelectionOneR.csv")
+
+```
+
+0.81901
+
+Ninguna de las otras fórmulas permite discriminar usando Random Forest por usar la variable Carretera que tiene más de 53 categorías. 
+
+
+#Aproximación 6: Preprocesamiento semántico
+
+Del apartado anterior obtenemos que la segunda variable que más discrimina es CARRETERA, dado que aparece en todas las fórmulas, menos en dos de ellas que son las que se vieron en el apartado anterior. 
+
+Esta variable contiene el nombre de la carretera, compuesto normalmente por una abreviatura de provincia o comunidad y un número. Dado que en españa hay 52 provincias y  18 ciudades autónomas, la combinación de las abreviaturas de estas con dígitos de 3 cifras hace que las combinatoria para obtener el número de factores se dispare hasta los cerca de 3000 niveles que tenemos. 
+
+La carretera no podemos defirla solamente con esta variable sino que tenemos que apoyarnos en las variables RED_CARRETERA Y TIPO_VÍA.
+
+Si fijamos en los niveles de TIPO_VÍA tenemos un nivel que es OTRO_TIPO que semáticamente se puede interpretar como un valor perdido. 
+
+```{r}
+sum(trainImputed$TIPO_VIA == "OTRO TIPO") / (dim(trainImputed)[1])
+```
+ Y como podemos ver, representa la mitad de los valores de esta variable. 
+ 
+ Si tomamos el sistema de nomenclatura de carreteras de Wikipedia podemos completar estos datos.
+ 
+ Como primer paso tenemos que separar los dos componentes del nombre de la carretera. 
+ 
+```{r}
+carreteraCHR = as.character(trainImputed$CARRETERA)
+carreteraCHR2 = lapply(carreteraCHR,function (x) strsplit(x,"-"))
+carreteraLetras = as.character(lapply(carreteraCHR2,function(x) return(x[[1]][1])))
+carreteraNumero = as.character(lapply(carreteraCHR2,function(x) return(x[[1]][2])))
+```
+
+
+Antes de continuar nos conviene saber que otros valores tiene la variable TIPO_VÍA
+
+```{r}
+levels(trainImputed$TIPO_VIA)
+```
+
+
+Ahora crearemos una "base de conocimiento" con la que vamos a completar los valores que determinados como "OTRO TIPO".
+
+```{r}
+for( i in 1:(dim(trainImputed)[1])){
+  if(trainImputed[i,17] == "OTRO TIPO"){
+    #print(i)
+    if(carreteraLetras[i] == "AP"){ #Autopista con peaje, la englobamos en autopista
+      trainImputed[i,17] = "AUTOPISTA"
+
+    }
+    else if(carreteraLetras[i] == "A"){ #Autopistas libres y autovías
+      trainImputed[i,17] = "AUTOVIA"
+      
+    }
+    else if(carreteraLetras[i] == "N"){ #Carreteras nacionales y de doble calzada
+      trainImputed[i,17] = "VIA CONVENCIONAL"
+      
+    }
+    else if(length(carreteraLetras[i]) == 2 && length(carreteraNumero) == 2 ){ #Puede ser cualquier tipo de carretera, depende del número de cifras.
+      trainImputed[i,17] = "AUTOVIA"
+      
+    }
+    else if(length(carreteraLetras[i]) == 2 && length(carreteraNumero) == 4 ){ #Puede ser cualquier tipo de carretera, depende del número de cifras.
+      trainImputed[i,17] = "CAMINO VECINAL"
+    }
+    else{
+      trainImputed[i,17] = "VIA CONVENCIONAL"
+    }
+  }
+}
+```
+
+
+```{r}
+sum(trainImputed$TIPO_VIA == "OTRO TIPO") / (dim(trainImputed)[1])
+```
+
+si ahora los 
+
+```{r}
+weight = FSelector::information.gain(TIPO_ACCIDENTE~.-CARRETERA,trainImputed)
+subsetW = cutoff.k(weight,5)
+f3 = as.simple.formula(subsetW, "TIPO_ACCIDENTE")
+print(f3)
+```
+
+
+```{r}
+rffs2Model = randomForest(f1, trainImputed[,c(-5)])
+rffsPredictions2 = predict(rffs2Model,test4Imputed)
+ToFile(rffsPredictions2,"randomForestFeatureSelectionOneRCompleteImputed.csv")
+
+```
+
+0.81901
+
+```{r}
+rffs2Model = randomForest(f1, trainImputed[,c(-5)],ntree=600, nodesize=6)
+rffsPredictions2 = predict(rffs2Model,test4Imputed)
+ToFile(rffsPredictions2,"randomForest600FeatureSelectionOneRCompleteImputed.csv")
+```
+
+0.81901
+
+```{r}
+trainImputedComplete = cbind(trainImputed,carreteraNumero,carreteraLetras)
+trainImputedComplete = trainImputedComplete[,-15]
+rffs2Model = randomForest(f1, trainImputed[,c(-5)],ntree=600, nodesize=6)
+rffsPredictions2 = predict(rffs2Model,test4Imputed)
+ToFile(rffsPredictions2,"randomForest600FeatureSelectionOneRExtendedImputed.csv")
+```
+
+0.81901
+
+```{r}
+carreteraCHR = as.character(test4Imputed$CARRETERA)
+carreteraCHR2 = lapply(carreteraCHR,function (x) strsplit(x,"-"))
+carreteraLetras = as.character(lapply(carreteraCHR2,function(x) return(x[[1]][1])))
+carreteraNumero = as.character(lapply(carreteraCHR2,function(x) return(x[[1]][2])))
+for( i in 1:(dim(test4Imputed)[1])){
+  if(test4Imputed[i,14] == "OTRO TIPO"){
+    #print(i)
+    if(carreteraLetras[i] == "AP"){ #Autopista con peaje, la englobamos en autopista
+      test4Imputed[i,14] = "AUTOPISTA"
+
+    }
+    else if(carreteraLetras[i] == "A"){ #Autopistas libres y autovías
+      test4Imputed[i,14] = "AUTOVIA"
+      
+    }
+    else if(carreteraLetras[i] == "N"){ #Carreteras nacionales y de doble calzada
+      test4Imputed[i,14] = "VIA CONVENCIONAL"
+      
+    }
+    else if(length(carreteraLetras[i]) == 2 && length(carreteraNumero) == 2 ){ #Puede ser cualquier tipo de carretera, depende del número de cifras.
+      test4Imputed[i,14] = "AUTOVIA"
+      
+    }
+    else if(length(carreteraLetras[i]) == 2 && length(carreteraNumero) == 4 ){ #Puede ser cualquier tipo de carretera, depende del número de cifras.
+      test4Imputed[i,14] = "CAMINO VECINAL"
+    }
+    else{
+      test4Imputed[i,14] = "VIA CONVENCIONAL"
+    }
+  }
+}
+```
+
+```{r}
+
+rffs2Model = randomForest(f1, trainImputed[,c(-5)],ntree=600, nodesize=6)
+rffsPredictions2 = predict(rffs2Model,test4Imputed)
+ToFile(rffsPredictions2,"randomForest600FeatureSelectionOneRExtendedImputedTrainAndTest.csv")
+```
+
+
+#Gráfica de la evolución de la puntuación con los modelos
